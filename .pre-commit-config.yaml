@@ -10,19 +10,20 @@ repos:
     rev: 21.12b0
     hooks:
       - id: black
-      - repo: https://github.com/pycqa/isort
-        rev: 5.10.1
-        hooks:
-          - id: isort
-            name: isort (python)
-          - id: isort
-            name: isort (cython)
-            types: [cython]
-          - id: isort
-            name: isort (pyi)
-            types: [pyi]
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
+        name: isort (python)
+      - id: isort
+        name: isort (cython)
+        types: [cython]
+      - id: isort
+        name: isort (pyi)
+        types: [pyi]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v0.931'
+    rev: v0.931
     hooks:
     - id: mypy
