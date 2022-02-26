@@ -10,6 +10,10 @@
 1.0 # float number
 1f # float number
 
+'a' # single character
+'\n' # single character
+"this is string" # string line
+
 + - * / # arith operations
 
 > >= < <= == != # equality operations
