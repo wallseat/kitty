@@ -1,28 +1,39 @@
 from enum import Enum, auto
 from typing import Any, Optional
 
-from kitty.lexer.position import Position
+from kitty.position import Position
 
 
 class TokenType(Enum):
-    # SPACE = auto()
-    # NLINE = auto()
+    NLINE = auto()  # \n
 
-    ADD = auto()
-    SUB = auto()
-    MUL = auto()
-    DIV = auto()
+    ADD = auto()  # +
+    SUB = auto()  # -
+    MUL = auto()  # *
+    DIV = auto()  # /
 
-    L_BRC = auto()
-    R_BRC = auto()
+    EQUAL = auto()  # =
+    GT = auto()  # >
+    LT = auto()  # <
+    GTE = auto()  # >=
+    LTE = auto()  # <=
+
+    L_BRC = auto()  # (
+    R_BRC = auto()  # )
+
+    COMMA = auto()  # ,
+    DOT = auto()  # .
+    COLON = auto()  # :
+    R_ARROW = auto()  # ->
 
     # S_BLOCK = auto()
     # E_BLOCK = auto()
 
-    INLINE_COMM = auto()
+    INLINE_COMMENT = auto()  # #
+    COMMENT = auto()  # /* ctx */
 
-    NUM_INT = auto()
-    NUM_FLOAT = auto()
+    NUM_INT = auto()  # 5
+    NUM_FLOAT = auto()  # 5.0 or 5f
 
 
 class Token:
@@ -52,6 +63,9 @@ class Token:
 
     def __repr__(self):
         if self.ctx:
-            return f"{self.type}:{self.ctx}"
+            if isinstance(self.ctx, str):
+                return f"{self.type}:[{len(self.ctx)} symbols]"
+            else:
+                return f"{self.type}:{self.ctx}"
 
         return f"{self.type}"

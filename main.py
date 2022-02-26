@@ -1,7 +1,7 @@
 import argparse
 from pprint import pprint
 
-from kitty.lexer.lexer import Lexer
+from kitty.lexer import Lexer
 
 parser = argparse.ArgumentParser()
 
@@ -12,6 +12,10 @@ group.add_argument(
 group.add_argument(
     "-c", "--compile", action="store_true", help="compile the input file"
 )
+group.add_argument(
+    "-p", "--parse", action="store_true", help="parse the input file and result AST"
+)
+
 group.add_argument(
     "-s",
     "--simulate",
@@ -41,3 +45,6 @@ if __name__ == "__main__":
             print(error)
         else:
             pprint(tokens)
+
+    elif args.parse:
+        print("Parsing not implemented yet!")
