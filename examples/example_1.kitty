@@ -1,0 +1,43 @@
+# Inline comment
+
+/*
+    Multi
+    Line
+    Comment
+*/
+
+1 # int number
+1.0 # float number
+1f # float number
+
++ - * / # arith operations
+
+> >= < <= == != # equality operations
+
+not and or # logical operations
+
+var a: int = 5656f # variable define
+var b = 4 # variable define
+
+func int_adder(a: int, b: int) -> int { # function
+    ret a + b
+}
+
+func bool_and_bool_inline(bool_a: bool, bool_b: bool) -> bool -> ret bool_a and bool_b # inline-like function
+
+func if_expressions() -> noret {
+    if ((a == b) and (c == d)) {
+        print(" lol \n \" ")
+    } elif ('a' == '\'') {
+        print("never printed")
+    } else {
+        print("ok")
+    }
+}
+
+func for_while_expression() -> noret {
+    for (var i in [1, 4, 6, 8]) -> print(i) # inline-like for statement
+    while (i < 5) {
+        print(i)
+    }
+}

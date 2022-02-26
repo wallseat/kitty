@@ -1,6 +1,6 @@
 statements  : NLINE* statement (NLINE+ statement)* NLINE*
 
-statement	  : KEYWORD:ret expr?
+statement   : KEYWORD:ret expr?
             : KEYWORD:continue
             : KEYWORD:break
             : expr
