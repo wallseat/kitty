@@ -91,6 +91,14 @@ class Lexer:
                 tokens.append(Token(TokenType.E_BLOCK, pos_start=self.pos))
                 self.advance()
 
+            elif self.cur_let == "[":
+                tokens.append(Token(TokenType.L_SQUARE, pos_start=self.pos))
+                self.advance()
+
+            elif self.cur_let == "]":
+                tokens.append(Token(TokenType.R_SQUARE, pos_start=self.pos))
+                self.advance()
+
             elif self.cur_let == ".":
                 tokens.append(Token(TokenType.DOT, pos_start=self.pos))
                 self.advance()
@@ -111,6 +119,36 @@ class Lexer:
                 tokens.append(self.lex_number())
                 self.advance()
 
+            elif self.cur_let == '"':
+                tokens.append(self.lex_string())
+                self.advance()
+
+            elif self.cur_let == "'":
+                start_pos = self.pos.copy()
+                self.advance()
+                char = self.cur_let
+
+                if char == "\\":
+                    self.advance()
+                    if self.cur_let in ("'"):
+                        char = self.cur_let
+                    else:
+                        char += self.cur_let
+
+                self.advance()
+
+                if self.cur_let != "'":
+                    return [], IllegalCharError(
+                        start_pos, self.pos.copy().advance(), f"'{self.cur_let}'"
+                    )
+
+                self.advance()
+                tokens.append(
+                    Token(
+                        TokenType.CHAR, pos_start=start_pos, pos_end=self.pos, ctx=char
+                    )
+                )
+
             elif self.cur_let in string.ascii_letters + "_":
                 tokens.append(self.lex_id())
 
@@ -119,6 +157,8 @@ class Lexer:
                 let = self.cur_let
                 self.advance()
                 return [], IllegalCharError(pos_start, self.pos, f"'{let}'")
+
+        tokens.append(Token(TokenType.EOF, self.pos))
 
         return tokens, None
 
@@ -158,6 +198,30 @@ class Lexer:
                 pos_end=self.pos,
             )
 
+    def lex_string(self) -> Token:
+        start_pos = self.pos.copy()
+        self.advance()
+
+        string = ""
+        while self.cur_let != None:
+            if self.cur_let == "\\":
+                self.advance()
+                if self.cur_let == '"':
+                    string += self.cur_let
+                else:
+                    string += "\\"
+                    string += self.cur_let
+
+            elif self.cur_let == '"':
+                break
+
+            else:
+                string += self.cur_let
+
+            self.advance()
+
+        return Token(TokenType.STR, pos_start=start_pos, pos_end=self.pos, ctx=string)
+
     def lex_inline_comment(self) -> Token:
         pos_start = self.pos.copy()
         self.advance()
@@ -187,7 +251,7 @@ class Lexer:
 
             comment_str = ""
             prev_let = ""
-            while True:
+            while self.cur_let != None:
                 if self.cur_let == "/" and prev_let == "*":
                     comment_str = comment_str[:-1]
                     break
@@ -268,6 +332,12 @@ class Lexer:
         elif identity == "if":
             return Token(TokenType.IF, pos_start=start_pos, pos_end=self.pos)
 
+        elif identity == "elif":
+            return Token(TokenType.ELIF, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "else":
+            return Token(TokenType.ELSE, pos_start=start_pos, pos_end=self.pos)
+
         elif identity == "while":
             return Token(TokenType.WHILE, pos_start=start_pos, pos_end=self.pos)
 
@@ -288,6 +358,25 @@ class Lexer:
 
         elif identity == "not":
             return Token(TokenType.NOT, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "in":
+            return Token(TokenType.IN, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "true":
+            return Token(
+                TokenType.BOOL, pos_start=start_pos, pos_end=self.pos, ctx=True
+            )
+
+        elif identity == "false":
+            return Token(
+                TokenType.BOOL, pos_start=start_pos, pos_end=self.pos, ctx=False
+            )
+
+        elif identity == "continue":
+            return Token(TokenType.CONTINUE, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "break":
+            return Token(TokenType.BREAK, pos_start=start_pos, pos_end=self.pos)
 
         else:
             self.symbol_table.set(identity, None)

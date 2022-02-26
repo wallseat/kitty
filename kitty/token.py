@@ -22,6 +22,10 @@ class TokenType(Enum):
 
     L_BRC = auto()  # (
     R_BRC = auto()  # )
+    S_BLOCK = auto()  # {
+    E_BLOCK = auto()  # }
+    L_SQUARE = auto()  # [
+    R_SQUARE = auto()  # ]
 
     COMMA = auto()  # ,
     DOT = auto()  # .
@@ -29,6 +33,8 @@ class TokenType(Enum):
     R_ARROW = auto()  # ->
 
     IF = auto()  # if
+    ELIF = auto()  # elif
+    ELSE = auto()  # else
     WHILE = auto()  # while
     FOR = auto()  # for
     RET = auto()  # ret
@@ -37,17 +43,31 @@ class TokenType(Enum):
     AND = auto()  # and
     OR = auto()  # or
     NOT = auto()  # not
+    IN = auto()  # in
+    CONTINUE = auto()  # continue
+    BREAK = auto()  # break
 
     IDENTITY = auto()  # a | abc | ...
-
-    S_BLOCK = auto()  # {
-    E_BLOCK = auto()  # }
 
     INLINE_COMMENT = auto()  # #
     COMMENT = auto()  # /* ctx */
 
     NUM_INT = auto()  # 5
     NUM_FLOAT = auto()  # 5.0 or 5f
+
+    STR = auto()  # "string"
+    CHAR = auto()  # 'a'
+
+    BOOL = auto()  # true | false
+
+    EOF = auto()  # end of file
+
+
+class VarType:
+    INT = auto()
+    FLOAT = auto()
+    STR = auto()
+    CHAR = auto()
 
 
 class Token:

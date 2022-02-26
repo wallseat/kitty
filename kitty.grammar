@@ -1,0 +1,56 @@
+statements  : NLINE* statement (NLINE+ statement)* NLINE*
+
+statement	  : KEYWORD:ret expr?
+            : KEYWORD:continue
+            : KEYWORD:break
+            : expr
+
+expr        : var-assign
+            : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
+
+var-assign  : KEYWORD:var IDENTIFIER
+              ((COLON IDENTIFIER) (ASSIGN expr)?) | ASSIGN expr
+
+comp-expr   : KEYWORD:not comp-expr
+            : arith-expr ((EQ|LT|GT|LTE|GTE) arith-expr)*
+
+arith-expr  : term ((ADD|SUB) term)*
+
+term        : factor ((MUL|DIV) factor)*
+
+factor      : (ADD|SUB) factor
+            : call
+
+call        : atom (L_BRC (expr (COMMA expr)*)? R_BRC)?
+
+atom        : INT|FLOAT|STR|CHAR|BOOL|IDENTIFIER
+            : L_BRC expr R_BRC
+            : if-expr
+            : for-expr
+            : while-expr
+            : func-def
+            : list-expr
+
+list-expr   : L_SQUARE (expr (COMMA expr)*)? R_SQUARE
+
+if-expr     : KEYWORD:if expr
+              R_ARROW (statement if-expr-b|if-expr-c?)
+            | (S_BLOCK statements E_BLOCK|if-expr-b|if-expr-c)
+
+if-expr-b   : KEYWORD:elif expr
+              R_ARROW (statement if-expr-b|if-expr-c?)
+            | (S_BLOCK statements E_BLOCK|if-expr-b|if-expr-c)
+
+if-expr-c   : KEYWORD:else
+              R_ARROW statement
+            | (S_BLOCK statements E_BLOCK)
+
+for-expr    : KEYWORD:for var-assign KEYWORD:in expr R_ARROW statement
+            | (S_BLOCK statements E_BLOCK)
+
+while-expr  : KEYWORD:while expr S_BLOCK statements E_BLOCK
+
+func-def    : KEYWORD:func IDENTIFIER?
+              L_BRC (IDENTIFIER (COMMA IDENTIFIER)*)? R_BRC R_ARROW IDENTIFIER
+              (R_ARROW expr)
+            | (S_BLOCK statements E_BLOCK)
