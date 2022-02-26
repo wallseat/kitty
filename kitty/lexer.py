@@ -2,6 +2,7 @@ import string
 
 from kitty.errors import IllegalCharError
 from kitty.position import Position
+from kitty.symbol_table import SymTable
 from kitty.token import Token, TokenType
 
 
@@ -10,11 +11,14 @@ class Lexer:
     fname: str
     pos: Position
     cur_let: str
+    symbol_table: SymTable
 
     def __init__(self, fname: str, text: str):
         self.text = text
         self.fname = fname
         self.pos = Position(-1, 0, -1, fname, text)
+        self.symbol_table = SymTable()
+
         self.cur_let = ""
         self.advance()
 
@@ -51,8 +55,7 @@ class Lexer:
                 self.advance()
 
             elif self.cur_let == "=":
-                tokens.append(Token(TokenType.EQUAL, pos_start=self.pos))
-                self.advance()
+                tokens.append(self.lex_assign_or_equal())
 
             elif self.cur_let == ">":
                 tokens.append(self.lex_gt_or_gte())
@@ -60,12 +63,32 @@ class Lexer:
             elif self.cur_let == "<":
                 tokens.append(self.lex_lt_or_lte())
 
+            elif self.cur_let == "!":
+                start_pos = self.pos.copy()
+
+                self.advance()
+                if self.cur_let == "=":
+                    tokens.append(
+                        Token(TokenType.NEQ, pos_start=start_pos, pos_end=self.pos)
+                    )
+                    self.advance()
+                else:
+                    return [], IllegalCharError(start_pos, self.pos, "'!'")
+
             elif self.cur_let == "(":
                 tokens.append(Token(TokenType.L_BRC, pos_start=self.pos))
                 self.advance()
 
             elif self.cur_let == ")":
                 tokens.append(Token(TokenType.R_BRC, pos_start=self.pos))
+                self.advance()
+
+            elif self.cur_let == "{":
+                tokens.append(Token(TokenType.S_BLOCK, pos_start=self.pos))
+                self.advance()
+
+            elif self.cur_let == "}":
+                tokens.append(Token(TokenType.E_BLOCK, pos_start=self.pos))
                 self.advance()
 
             elif self.cur_let == ".":
@@ -88,11 +111,14 @@ class Lexer:
                 tokens.append(self.lex_number())
                 self.advance()
 
+            elif self.cur_let in string.ascii_letters + "_":
+                tokens.append(self.lex_id())
+
             else:
                 pos_start = self.pos.copy()
-                char = self.cur_let
+                let = self.cur_let
                 self.advance()
-                return [], IllegalCharError(pos_start, self.pos, "'" + char + "'")
+                return [], IllegalCharError(pos_start, self.pos, f"'{let}'")
 
         return tokens, None
 
@@ -215,3 +241,56 @@ class Lexer:
 
         else:
             return Token(TokenType.LT, pos_start=start_pos, pos_end=self.pos)
+
+    def lex_assign_or_equal(self) -> Token:
+        start_pos = self.pos.copy()
+
+        self.advance()
+        if self.cur_let == "=":
+            tok = Token(TokenType.EQ, pos_start=start_pos, pos_end=self.pos)
+            self.advance()
+            return tok
+
+        else:
+            return Token(TokenType.ASSIGN, pos_start=start_pos, pos_end=self.pos)
+
+    def lex_id(self) -> Token:
+        start_pos = self.pos.copy()
+        identity = ""
+
+        while self.cur_let != None and self.cur_let in string.ascii_letters + "_":
+            identity += self.cur_let
+            self.advance()
+
+        if identity == "for":
+            return Token(TokenType.FOR, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "if":
+            return Token(TokenType.IF, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "while":
+            return Token(TokenType.WHILE, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "ret":
+            return Token(TokenType.RET, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "var":
+            return Token(TokenType.VAR, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "func":
+            return Token(TokenType.FUNC, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "and":
+            return Token(TokenType.AND, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "or":
+            return Token(TokenType.OR, pos_start=start_pos, pos_end=self.pos)
+
+        elif identity == "not":
+            return Token(TokenType.NOT, pos_start=start_pos, pos_end=self.pos)
+
+        else:
+            self.symbol_table.set(identity, None)
+            return Token(
+                TokenType.IDENTITY, pos_start=start_pos, pos_end=self.pos, ctx=identity
+            )
