@@ -2,10 +2,11 @@ import argparse
 from pprint import pprint
 
 from kitty.lexer import Lexer
+from kitty.parser import Parser
 
-parser = argparse.ArgumentParser()
+arg_parser = argparse.ArgumentParser()
 
-group = parser.add_mutually_exclusive_group(required=True)
+group = arg_parser.add_mutually_exclusive_group(required=True)
 group.add_argument(
     "-l", "--lex", action="store_true", help="lex input file and return token list"
 )
@@ -23,11 +24,13 @@ group.add_argument(
     help="run kitty interpretor with file as input",
 )
 
-parser.add_argument("file", type=str, help="run kitty interpretor with file as input")
+arg_parser.add_argument(
+    "file", type=str, help="run kitty interpretor with file as input"
+)
 
 
 if __name__ == "__main__":
-    args = parser.parse_args()
+    args = arg_parser.parse_args()
     if args.compile:
         print("Compiling not implemented yet!")
 
@@ -47,4 +50,19 @@ if __name__ == "__main__":
             pprint(tokens)
 
     elif args.parse:
-        print("Parsing not implemented yet!")
+        with open(args.file, "r", encoding="utf-8") as f:
+            text = f.read()
+
+        lexer = Lexer(args.file, text)
+        tokens, error = lexer.tokenize()
+
+        if error:
+            print(error)
+            exit(-1)
+
+        parser = Parser(tokens)
+        res = parser.parse()
+        if res.error:
+            print(res.error)
+        else:
+            print(res.node)

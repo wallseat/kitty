@@ -117,7 +117,6 @@ class Lexer:
 
             elif self.cur_let in string.digits:
                 tokens.append(self.lex_number())
-                self.advance()
 
             elif self.cur_let == '"':
                 tokens.append(self.lex_string())
@@ -176,6 +175,7 @@ class Lexer:
 
             elif self.cur_let == "f":
                 dot_count = 1
+                self.advance()
                 break
 
             else:
@@ -243,7 +243,6 @@ class Lexer:
         self.advance()
 
         if self.cur_let != "*":
-            self.advance()
             return Token(TokenType.DIV, pos_start=pos_start, pos_end=self.pos)
 
         else:
@@ -381,5 +380,8 @@ class Lexer:
         else:
             self.symbol_table.set(identity, None)
             return Token(
-                TokenType.IDENTITY, pos_start=start_pos, pos_end=self.pos, ctx=identity
+                TokenType.IDENTIFIER,
+                pos_start=start_pos,
+                pos_end=self.pos,
+                ctx=identity,
             )

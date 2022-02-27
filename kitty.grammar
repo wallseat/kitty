@@ -1,4 +1,4 @@
-statements  : NLINE* statement (NLINE+ statement)* NLINE*
+statements  : (NLINE | INLINE_COMMENT)* statement ((NLINE | INLINE_COMMENT)* statement)* (NLINE | INLINE_COMMENT)*
 
 statement   : KEYWORD:ret expr?
             : KEYWORD:continue
@@ -23,7 +23,7 @@ factor      : (ADD|SUB) factor
 
 call        : atom (L_BRC (expr (COMMA expr)*)? R_BRC)?
 
-atom        : INT|FLOAT|STR|CHAR|BOOL|IDENTIFIER
+atom        : INT|FLOAT|STR|CHAR|BOOL|IDENTIFIER|COMMENT
             : L_BRC expr R_BRC
             : if-expr
             : for-expr

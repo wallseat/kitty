@@ -5,82 +5,86 @@ from kitty.position import Position
 
 
 class TokenType(Enum):
-    NLINE = auto()  # \n
+    NLINE = "NLINE"  # \n
 
-    ADD = auto()  # +
-    SUB = auto()  # -
-    MUL = auto()  # *
-    DIV = auto()  # /
-    ASSIGN = auto()  # =
+    ADD = "ADD"  # +
+    SUB = "SUB"  # -
+    MUL = "MUL"  # *
+    DIV = "DIV"  # /
+    ASSIGN = "ASSIGN"  # =
 
-    EQ = auto()  # ==
-    NEQ = auto()  # !=
-    GT = auto()  # >
-    LT = auto()  # <
-    GTE = auto()  # >=
-    LTE = auto()  # <=
+    EQ = "EQ"  # ==
+    NEQ = "NEQ"  # !=
+    GT = "GT"  # >
+    LT = "LT"  # <
+    GTE = "GTE"  # >=
+    LTE = "LTE"  # <=
 
-    L_BRC = auto()  # (
-    R_BRC = auto()  # )
-    S_BLOCK = auto()  # {
-    E_BLOCK = auto()  # }
-    L_SQUARE = auto()  # [
-    R_SQUARE = auto()  # ]
+    L_BRC = "L_BRC"  # (
+    R_BRC = "R_BRC"  # )
+    S_BLOCK = "S_BLOCK"  # {
+    E_BLOCK = "E_BLOCK"  # }
+    L_SQUARE = "L_SQUARE"  # [
+    R_SQUARE = "R_SQUARE"  # ]
 
-    COMMA = auto()  # ,
-    DOT = auto()  # .
-    COLON = auto()  # :
-    R_ARROW = auto()  # ->
+    COMMA = "COMMA"  # ,
+    DOT = "DOT"  # .
+    COLON = "COLON"  # :
+    R_ARROW = "R_ARROW"  # ->
 
-    IF = auto()  # if
-    ELIF = auto()  # elif
-    ELSE = auto()  # else
-    WHILE = auto()  # while
-    FOR = auto()  # for
-    RET = auto()  # ret
-    VAR = auto()  # var
-    FUNC = auto()  # func
-    AND = auto()  # and
-    OR = auto()  # or
-    NOT = auto()  # not
-    IN = auto()  # in
-    CONTINUE = auto()  # continue
-    BREAK = auto()  # break
+    IF = "IF"  # if
+    ELIF = "ELIF"  # elif
+    ELSE = "ELSE"  # else
+    WHILE = "WHILE"  # while
+    FOR = "FOR"  # for
+    RET = "RET"  # ret
+    VAR = "VAR"  # var
+    FUNC = "FUNC"  # func
+    AND = "AND"  # and
+    OR = "OR"  # or
+    NOT = "NOT"  # not
+    IN = "IN"  # in
+    CONTINUE = "CONTINUE"  # continue
+    BREAK = "BREAK"  # break
 
-    IDENTITY = auto()  # a | abc | ...
+    IDENTIFIER = "IDENTIFIER"  # a | abc | ...
 
-    INLINE_COMMENT = auto()  # #
-    COMMENT = auto()  # /* ctx */
+    INLINE_COMMENT = "INLINE_COMMENT"  # #
+    COMMENT = "COMMENT"  # /* ctx */
 
-    NUM_INT = auto()  # 5
-    NUM_FLOAT = auto()  # 5.0 or 5f
+    NUM_INT = "NUM_INT"  # 5
+    NUM_FLOAT = "NUM_FLOAT"  # 5.0 or 5f
 
-    STR = auto()  # "string"
-    CHAR = auto()  # 'a'
+    STR = "STR"  # "string"
+    CHAR = "CHAR"  # 'a'
 
-    BOOL = auto()  # true | false
+    BOOL = "BOOL"  # true | false
 
-    EOF = auto()  # end of file
+    EOF = "EOF"  # end of file
 
 
 class VarType:
-    INT = auto()
-    FLOAT = auto()
-    STR = auto()
-    CHAR = auto()
+    INT = "INT"
+    FLOAT = "FLOAT"
+    STR = "STR"
+    CHAR = "CHAR"
+    BOOL = "BOOL"
+
+    GENERIC = "GENERIC"
+    UNTYPED = "UNTYPED"
 
 
 class Token:
     type_: TokenType
     ctx: Any
 
-    pos_start: Optional[Position]
-    pos_end: Optional[Position]
+    pos_start: Position
+    pos_end: Position
 
     def __init__(
         self,
         type_: TokenType,
-        pos_start: Position = None,
+        pos_start: Position,
         pos_end: Position = None,
         ctx: Any = None,
     ):

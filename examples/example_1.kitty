@@ -6,22 +6,28 @@
     Comment
 */
 
-1 # int number
-1.0 # float number
-1f # float number
+var a = 1 # int number
+var b = 1.0 # float number
+var c = 1f # float number
 
-'a' # single character
-'\n' # single character
-"this is string" # string line
+var d = 'a' # single character
+var e = '\n' # single character
+var f = "this is string" # string line
 
-+ - * / # arith operations
+var g = 1 + 2 - 3 * 4 / 5 # arith operations
 
-> >= < <= == != # equality operations
+var h = 1 > 2  # equality operations
+var i = 6 >= 3
+var j = 1 < 5
+var k = 5 <= 6
+var l = 0 == 0
+var m = 1 != 5
 
-not and or # logical operations
+var n = not true and false or true # logical operations
 
-var a: int = 5656f # variable define
-var b = 4 # variable define
+var a: float = 5656f # variable define with type and assign
+var b = 4 # variable define without type
+var c: str # variable define without assign
 
 func int_adder(a: int, b: int) -> int { # function
     ret a + b
