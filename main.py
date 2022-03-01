@@ -26,7 +26,7 @@ group.add_argument(
 )
 
 arg_parser.add_argument(
-    "--debug", action="store_true", help="enable compiler debug mode"
+    "-d", "--debug", action="store_true", help="enable compiler debug mode"
 )
 
 arg_parser.add_argument(
