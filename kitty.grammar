@@ -50,7 +50,7 @@ for-expr    : KEYWORD:for var-assign KEYWORD:in expr R_ARROW statement
 
 while-expr  : KEYWORD:while expr S_BLOCK statements E_BLOCK
 
-func-def    : KEYWORD:func IDENTIFIER?
-              L_BRC (IDENTIFIER (COMMA IDENTIFIER)*)? R_BRC R_ARROW IDENTIFIER
+func-def    : KEYWORD:func IDENTIFIER
+              L_BRC (IDENTIFIER COLON IDENTIFIER (COMMA IDENTIFIER COLON IDENTIFIER)*)? R_BRC R_ARROW IDENTIFIER
               (R_ARROW expr)
             | (S_BLOCK statements E_BLOCK)

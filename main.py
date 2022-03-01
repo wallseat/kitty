@@ -1,4 +1,5 @@
 import argparse
+import logging
 from pprint import pprint
 
 from kitty.lexer import Lexer
@@ -25,12 +26,22 @@ group.add_argument(
 )
 
 arg_parser.add_argument(
+    "--debug", action="store_true", help="enable compiler debug mode"
+)
+
+arg_parser.add_argument(
     "file", type=str, help="run kitty interpretor with file as input"
 )
 
 
 if __name__ == "__main__":
     args = arg_parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(
+            level=logging.DEBUG, format="%(filename)s : %(lineno)d : %(message)s"
+        )
+
     if args.compile:
         print("Compiling not implemented yet!")
 

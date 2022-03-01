@@ -1,0 +1,17 @@
+func a() -> noret {
+    ret 1 + 1
+}
+
+func b(a: int) -> noret {
+    ret 2 + 2
+}
+
+func c(a: int, b: char, c: bool) -> noret {
+    var a = 5
+
+    ret a
+}
+
+func d() -> str -> 1 + 1
+
+func e(a: int, b: float) -> Generic -> (5 / 4 + 2)

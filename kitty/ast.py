@@ -117,8 +117,8 @@ class StatementsNode(BaseNode):
 
     def __repr__(self):
         return (
-            "Statements[\n"
-            + "\n".join(str(statement) for statement in self.statements)
+            "Statements[\n\t"
+            + "\n\t".join(str(statement) for statement in self.statements)
             + "\n]"
         )
 
@@ -237,3 +237,67 @@ class BoolNode(BaseNode):
 
     def __repr__(self):
         return str(self.token)
+
+
+class FuncDefNode(BaseNode):
+    func_id_token: Token
+    arg_id_tokens: List[Token]
+    arg_type_tokens: List[Token]
+    ret_type_token: Token
+    body: BaseNode
+    auto_ret: bool
+
+    def __init__(
+        self,
+        func_id_token: Token,
+        arg_id_tokens: List[Token],
+        arg_type_tokens: List[Token],
+        ret_type_token: Token,
+        body: BaseNode,
+        auto_ret: bool = False,
+    ):
+        self.func_id_token = func_id_token
+        self.arg_id_tokens = arg_id_tokens
+        self.arg_type_tokens = arg_type_tokens
+        self.ret_type_token = ret_type_token
+        self.body = body
+        self.auto_ret = auto_ret
+
+        super(FuncDefNode, self).__init__(func_id_token.pos_start, body.pos_end)
+
+    def as_struct(
+        self,
+    ) -> Tuple[str, Token, List[Token], List[Token], Token, Any, bool]:
+        return (
+            "FuncDefNode",
+            self.func_id_token,
+            self.arg_id_tokens,
+            self.arg_type_tokens,
+            self.ret_type_token,
+            self.body,
+            self.auto_ret,
+        )
+
+    def __repr__(self):
+        return (
+            f"FuncDef[id: {self.func_id_token}\n"
+            f"\targ_ids: {self.arg_id_tokens}\n"
+            f"\targ_types: {self.arg_type_tokens}\n"
+            f"\tret_type: {self.ret_type_token}\n"
+            f"\tbody: {self.body}\n"
+            f"\tauto_ret: {self.auto_ret}\n"
+        )
+
+
+class ReturnNode(BaseNode):
+    ret_node: Optional[BaseNode]
+
+    def __init__(
+        self, ret_node: Optional[BaseNode], pos_start: Position, pos_end: Position
+    ):
+        self.ret_node = ret_node
+
+        super(ReturnNode, self).__init__(pos_start, pos_end)
+
+    def __repr__(self):
+        return f"Ret[{self.ret_node}]"

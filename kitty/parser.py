@@ -1,3 +1,4 @@
+import logging
 from typing import Callable, List, Optional, Tuple
 
 from kitty.ast import (
@@ -7,8 +8,10 @@ from kitty.ast import (
     CallNode,
     CharNode,
     CommentNode,
+    FuncDefNode,
     ListNode,
     NumNode,
+    ReturnNode,
     StatementsNode,
     StrNode,
     UnaryOpNode,
@@ -98,6 +101,8 @@ class Parser:
         )
 
     def parse(self) -> ParseResult:
+        logging.debug("Start parsing")
+
         res = self.parse_statements()
         if not res.error and self.cur_tok.type != TokenType.EOF:
             return res.register_failure(
@@ -107,9 +112,14 @@ class Parser:
                     "Token cannot appear after previous tokens",
                 )
             )
+
+        logging.debug("Parsed statements in parse")
+
         return res
 
     def parse_statements(self) -> ParseResult:
+        logging.debug("Parse statements")
+
         res = ParseResult()
         statements: List[BaseNode] = []
         pos_start = self.cur_tok.pos_start.copy()
@@ -139,6 +149,8 @@ class Parser:
                 more_statements = False
                 continue
 
+            logging.debug(f"Parsed statement")
+
             statements.append(statement)
 
         return res.register_success(
@@ -146,11 +158,24 @@ class Parser:
         )
 
     def parse_statement(self) -> ParseResult:
+        logging.debug("Parse statement")
+
         res = ParseResult()
         pos_start = self.cur_tok.pos_start.copy()
 
         if self.cur_tok.type == TokenType.RET:
-            raise NotImplementedError
+            self.advance(res)
+
+            expr = res.register_result(self.parse_expr())
+            if res.error:
+                return res
+
+            if not expr:
+                self.retreat(res.last_registered_advancements)
+
+            return res.register_success(
+                ReturnNode(expr, pos_start, self.cur_tok.pos_start.copy())
+            )
 
         elif self.cur_tok.type == TokenType.BREAK:
             raise NotImplementedError
@@ -165,6 +190,8 @@ class Parser:
         return res.register_success(expr)
 
     def parse_expr(self) -> ParseResult:
+        logging.debug("Parse expr")
+
         res = ParseResult()
         if self.cur_tok.type == TokenType.VAR:  # var assgin
             var_assign = res.register_result(self.parse_var_assign())
@@ -181,9 +208,13 @@ class Parser:
             if res.error or not node:
                 return res
 
+            logging.debug(f"Parsed bin op node in expr")
+
             return res.register_success(node)
 
     def parse_var_assign(self) -> ParseResult:
+        logging.debug("Parse var assignment")
+
         res = ParseResult()
 
         self.advance(res)
@@ -249,6 +280,8 @@ class Parser:
         return res.register_success(VarNode(var_id_tok, var_type, var_expr))  # type: ignore
 
     def parse_comp_expr(self) -> ParseResult:
+        logging.debug("Parse comp expr")
+
         res = ParseResult()
 
         if self.cur_tok.type == TokenType.NOT:
@@ -258,6 +291,8 @@ class Parser:
             node = res.register_result(self.parse_comp_expr())
             if res.error or not node:
                 return res
+
+            logging.debug(f"Parsed unary op node in comp expr")
 
             return res.register_success(UnaryOpNode(op_tok, node))
 
@@ -278,15 +313,31 @@ class Parser:
         if res.error or not node:
             return res
 
+        logging.debug(f"Parsed bin op in comp expr")
+
         return res.register_success(node)
 
     def parse_arith_expr(self) -> ParseResult:
-        return self.parse_bin_op(self.parse_term, (TokenType.ADD, TokenType.SUB))
+        logging.debug("Parse arith expr")
+
+        arith_expr = self.parse_bin_op(self.parse_term, (TokenType.ADD, TokenType.SUB))
+
+        logging.debug(f"Parsed bin op node in arith expr")
+
+        return arith_expr
 
     def parse_term(self) -> ParseResult:
-        return self.parse_bin_op(self.parse_factor, (TokenType.MUL, TokenType.DIV))
+        logging.debug("Parse term")
+
+        term = self.parse_bin_op(self.parse_factor, (TokenType.MUL, TokenType.DIV))
+
+        logging.debug(f"Parsed bin op node in term")
+
+        return term
 
     def parse_factor(self) -> ParseResult:
+        logging.debug("Parse factor")
+
         res = ParseResult()
         tok = self.cur_tok
 
@@ -297,11 +348,22 @@ class Parser:
             if res.error or not factor:
                 return res
 
-            return res.register_success(UnaryOpNode(tok, factor))
+            unary_op_node = UnaryOpNode(tok, factor)
 
-        return self.parse_call()
+            logging.debug(f"Parsed unary op node in factor")
+
+            return res.register_success(unary_op_node)
+
+        call_node = res.register_result(self.parse_call())
+
+        if res.error or not call_node:
+            return res
+
+        return res.register_success(call_node)
 
     def parse_call(self) -> ParseResult:
+        logging.debug("Parse call")
+
         res = ParseResult()
         atom = res.register_result(self.parse_atom())
         if res.error or not atom:
@@ -339,36 +401,54 @@ class Parser:
                     )
 
                 self.advance(res)
+
+            call_node = CallNode(atom, args)
+            logging.debug(f"Parsed call")
+
             return res.register_success(CallNode(atom, args))
+
+        logging.debug(f"Parsed atom")
 
         return res.register_success(atom)
 
     def parse_atom(self) -> ParseResult:
+        logging.debug("Parse atom")
+
         res = ParseResult()
         tok = self.cur_tok
 
         if tok.type in (TokenType.NUM_INT, TokenType.NUM_FLOAT):
             self.advance(res)
 
+            logging.debug(f"Parsed numeric")
+
             return res.register_success(NumNode(tok))
 
         elif tok.type == TokenType.STR:
             self.advance(res)
+
+            logging.debug(f"Parsed str")
 
             return res.register_success(StrNode(tok))
 
         elif tok.type == TokenType.CHAR:
             self.advance(res)
 
+            logging.debug(f"Parsed char")
+
             return res.register_success(CharNode(tok))
 
         elif tok.type == TokenType.BOOL:
             self.advance(res)
 
-            return res.register_success(BoolNode(tok))
+            logging.debug(f"Parsed bool")
+
+            return res.register_success(VarAccessNode(tok))
 
         elif tok.type == TokenType.IDENTIFIER:
             self.advance(res)
+
+            logging.debug(f"Parsed identifier")
 
             return res.register_success(VarAccessNode(tok))
 
@@ -380,6 +460,9 @@ class Parser:
 
             if self.cur_tok.type == TokenType.R_BRC:
                 self.advance(res)
+
+                logging.debug(f"Parsed expr in atom")
+
                 return res.register_success(expr)
 
             else:
@@ -396,16 +479,23 @@ class Parser:
             if res.error or not list_expr:
                 return res
 
+            logging.debug(f"Parsed list expr")
+
             return res.register_success(list_expr)
 
         elif tok.type == TokenType.COMMENT:
             self.advance(res)
+
+            logging.debug(f"Parsed comment")
+
             return res.register_success(CommentNode(tok))
 
         elif tok.type == TokenType.IF:
             if_expr = res.register_result(self.parse_if_expr())
             if res.error or not if_expr:
                 return res
+
+            logging.debug(f"Parsed if expr")
 
             return res.register_success(if_expr)
 
@@ -414,12 +504,16 @@ class Parser:
             if res.error or not for_expr:
                 return res
 
+            logging.debug(f"Parsed for expr")
+
             return res.register_success(for_expr)
 
         elif tok.type == TokenType.WHILE:
             while_expr = res.register_result(self.parse_while_expr())
             if res.error or not while_expr:
                 return res
+
+            logging.debug(f"Parsed while expr")
 
             return res.register_success(while_expr)
 
@@ -428,15 +522,11 @@ class Parser:
             if res.error or not func_def:
                 return res
 
+            logging.debug(f"Parsed func def, id: {func_def.func_id_token}")  # type: ignore
+
             return res.register_success(func_def)
 
-        return res.register_failure(
-            InvalidSyntaxError(
-                tok.pos_start,
-                tok.pos_end,
-                "Expected int, float, str, char, identifier, '+', '-', '(', '[', if', 'for', 'while', 'func'",
-            )
-        )
+        return res
 
     def parse_bin_op(
         self,
@@ -444,6 +534,7 @@ class Parser:
         operations: Tuple[TokenType, ...],
         right_operand: Optional[Callable[[], ParseResult]] = None,
     ) -> ParseResult:
+        logging.debug("Parse bin op")
 
         if right_operand == None:
             right_operand = left_operand
@@ -466,6 +557,8 @@ class Parser:
         return res.register_success(left)
 
     def parse_list_expr(self) -> ParseResult:
+        logging.debug("Parse list expr")
+
         res = ParseResult()
         elements: List[BaseNode] = []
         pos_start = self.cur_tok.pos_start.copy()
@@ -528,4 +621,213 @@ class Parser:
         raise NotImplementedError
 
     def parse_func_def(self) -> ParseResult:
-        raise NotImplementedError
+        logging.debug("Parse func def")
+
+        res = ParseResult()
+
+        if self.cur_tok.type != TokenType.FUNC:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    f"Expected 'func'",
+                )
+            )
+
+        self.advance(res)
+
+        func_id_token = None
+        if self.cur_tok.type == TokenType.IDENTIFIER:
+            func_id_token = self.cur_tok
+            self.advance(res)
+            if self.cur_tok.type != TokenType.L_BRC:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        "Expected '('",
+                    )
+                )
+        else:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    "Expected function identifier",
+                )
+            )
+
+        self.advance(res)
+
+        arg_id_tokens = []
+        arg_type_tokens = []
+        if self.cur_tok.type == TokenType.IDENTIFIER:  # Read arguments and their types
+            arg_id_tokens.append(self.cur_tok)
+
+            self.advance(res)
+
+            if self.cur_tok.type != TokenType.COLON:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        "Expected ':'",
+                    )
+                )
+
+            self.advance()
+
+            if self.cur_tok.type != TokenType.IDENTIFIER:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        "Expected argument type identifier",
+                    )
+                )
+
+            arg_type_tokens.append(self.cur_tok)
+
+            self.advance(res)
+
+            while self.cur_tok.type == TokenType.COMMA:
+                self.advance(res)
+
+                if self.cur_tok.type != TokenType.IDENTIFIER:
+                    return res.register_failure(
+                        InvalidSyntaxError(
+                            self.cur_tok.pos_start,
+                            self.cur_tok.pos_end,
+                            "Expected argument identifier",
+                        )
+                    )
+
+                arg_id_tokens.append(self.cur_tok)
+
+                self.advance(res)
+
+                if self.cur_tok.type != TokenType.COLON:
+                    return res.register_failure(
+                        InvalidSyntaxError(
+                            self.cur_tok.pos_start,
+                            self.cur_tok.pos_end,
+                            "Expected ':'",
+                        )
+                    )
+
+                self.advance(res)
+
+                if self.cur_tok.type != TokenType.IDENTIFIER:
+                    return res.register_failure(
+                        InvalidSyntaxError(
+                            self.cur_tok.pos_start,
+                            self.cur_tok.pos_end,
+                            "Expected argument type identifier",
+                        )
+                    )
+
+                arg_type_tokens.append(self.cur_tok)
+
+                self.advance(res)
+
+            if self.cur_tok.type != TokenType.R_BRC:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        f"Expected ',' or ')'",
+                    )
+                )
+        else:
+            if self.cur_tok.type != TokenType.R_BRC:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        "Expected identifier or ')'",
+                    )
+                )
+
+        self.advance()
+
+        ret_type_token = None
+
+        if self.cur_tok.type != TokenType.R_ARROW:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    "Expected '->'",
+                )
+            )
+
+        self.advance(res)
+
+        if self.cur_tok.type == TokenType.IDENTIFIER:
+            ret_type_token = self.cur_tok
+
+        else:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    "Expected return type identifier",
+                )
+            )
+
+        self.advance(res)
+
+        body = None
+        auto_ret = False
+        if self.cur_tok.type == TokenType.R_ARROW:
+            self.advance(res)
+
+            body = res.register_result(self.parse_expr())
+
+            if res.error or not body:
+                return res
+
+            logging.debug("Parse expr in func def")
+
+            auto_ret = True
+
+        elif self.cur_tok.type == TokenType.S_BLOCK:
+            self.advance(res)
+
+            body = res.register_result(self.parse_statements())
+
+            if res.error or not body:
+                return res
+
+            logging.debug("Parsed statements in func def")
+
+            if self.cur_tok.type != TokenType.E_BLOCK:
+                res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        "Expected '}'",
+                    )
+                )
+
+            self.advance(res)
+
+        else:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    "Expected '->' or '{'",
+                )
+            )
+
+        return res.register_success(
+            FuncDefNode(
+                func_id_token,
+                arg_id_tokens,
+                arg_type_tokens,
+                ret_type_token,
+                body,
+                auto_ret=auto_ret,
+            )
+        )
