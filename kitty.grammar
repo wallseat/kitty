@@ -3,10 +3,11 @@ statements  : (NLINE | INLINE_COMMENT)* statement ((NLINE | INLINE_COMMENT)* sta
 statement   : KEYWORD:ret expr?
             : KEYWORD:continue
             : KEYWORD:break
+            : func-def
+            : var-assign
             : expr
 
-expr        : var-assign
-            : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
+expr        : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
 
 var-assign  : KEYWORD:var IDENTIFIER
               ((COLON IDENTIFIER) (ASSIGN expr)?) | ASSIGN expr
@@ -28,7 +29,6 @@ atom        : INT|FLOAT|STR|CHAR|BOOL|IDENTIFIER|COMMENT
             : if-expr
             : for-expr
             : while-expr
-            : func-def
             : list-expr
 
 list-expr   : L_SQUARE (expr (COMMA expr)*)? R_SQUARE

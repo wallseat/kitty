@@ -166,16 +166,34 @@ class Parser:
         if self.cur_tok.type == TokenType.RET:
             self.advance(res)
 
-            expr = res.register_result(self.parse_expr())
-            if res.error:
-                return res
+            expr = None
+            if self.cur_tok.type != TokenType.NLINE:
+                expr = res.register_result(self.parse_expr())
+                if res.error:
+                    return res
 
-            if not expr:
-                self.retreat(res.last_registered_advancements)
+                if not expr:
+                    self.retreat(res.last_registered_advancements)
 
             return res.register_success(
                 ReturnNode(expr, pos_start, self.cur_tok.pos_start.copy())
             )
+
+        elif self.cur_tok.type == TokenType.FUNC:
+            func_def = res.register_result(self.parse_func_def())
+            if res.error or not func_def:
+                return res
+
+            logging.debug(f"Parsed func def, id: {func_def.func_id_token}")  # type: ignore
+
+            return res.register_success(func_def)
+
+        elif self.cur_tok.type == TokenType.VAR:  # var assgin
+            var_assign = res.register_result(self.parse_var_assign())
+            if res.error:
+                return res
+
+            return res.register_success(var_assign)  # type: ignore
 
         elif self.cur_tok.type == TokenType.BREAK:
             raise NotImplementedError
@@ -193,24 +211,17 @@ class Parser:
         logging.debug("Parse expr")
 
         res = ParseResult()
-        if self.cur_tok.type == TokenType.VAR:  # var assgin
-            var_assign = res.register_result(self.parse_var_assign())
-            if res.error:
-                return res
 
-            return res.register_success(var_assign)  # type: ignore
+        node = res.register_result(
+            self.parse_bin_op(self.parse_comp_expr, (TokenType.OR, TokenType.AND))
+        )
 
-        else:
-            node = res.register_result(
-                self.parse_bin_op(self.parse_comp_expr, (TokenType.OR, TokenType.AND))
-            )
+        if res.error or not node:
+            return res
 
-            if res.error or not node:
-                return res
+        logging.debug(f"Parsed bin op node in expr")
 
-            logging.debug(f"Parsed bin op node in expr")
-
-            return res.register_success(node)
+        return res.register_success(node)
 
     def parse_var_assign(self) -> ParseResult:
         logging.debug("Parse var assignment")
@@ -402,7 +413,6 @@ class Parser:
 
                 self.advance(res)
 
-            call_node = CallNode(atom, args)
             logging.debug(f"Parsed call")
 
             return res.register_success(CallNode(atom, args))
@@ -517,16 +527,16 @@ class Parser:
 
             return res.register_success(while_expr)
 
-        elif tok.type == TokenType.FUNC:
-            func_def = res.register_result(self.parse_func_def())
-            if res.error or not func_def:
-                return res
+        elif tok.type == TokenType.E_BLOCK:
+            return res
 
-            logging.debug(f"Parsed func def, id: {func_def.func_id_token}")  # type: ignore
-
-            return res.register_success(func_def)
-
-        return res
+        return res.register_failure(
+            InvalidSyntaxError(
+                tok.pos_start.copy(),
+                tok.pos_end.copy(),
+                details="Expected expr (numeric, str, char, identifier, if, for, while or list expr)",
+            )
+        )
 
     def parse_bin_op(
         self,

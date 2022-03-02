@@ -14,8 +14,8 @@ class BaseNode:
         self.pos_start = pos_start
         self.pos_end = pos_end
 
-    def as_struct(self) -> Tuple:
-        return ()
+    def pretty_repr(self, indent: int = 0) -> str:
+        return ("\t" * indent) + "[" + self.__class__.__name__ + "]"
 
 
 class NumNode(BaseNode):
@@ -26,11 +26,8 @@ class NumNode(BaseNode):
 
         super(NumNode, self).__init__(token.pos_start, token.pos_end)
 
-    def as_struct(self) -> Tuple[str, Token]:
-        return ("Numeric", self.token)
-
-    def __repr__(self):
-        return repr(self.token)
+    def pretty_repr(self, indent: int = 0) -> str:
+        return ("\t" * indent) + f"Numeric[{self.token}]"
 
 
 class BinOpNode(BaseNode):
@@ -47,16 +44,25 @@ class BinOpNode(BaseNode):
 
         super(BinOpNode, self).__init__(left_operand.pos_start, right_operand.pos_end)
 
-    def as_struct(self) -> Tuple[str, Any, Token, Any]:
+    def pretty_repr(self, indent: int = 0) -> str:
         return (
-            "BinaryOp",
-            self.left_operand.as_struct(),
-            self.op_token,
-            self.right_operand.as_struct(),
+            ("\t" * indent)
+            + "BinOp[\n"
+            + ("\t" * indent)
+            + f"\tleft: [\n"
+            + f"\t{self.left_operand.pretty_repr(indent + 1)}\n"
+            + ("\t" * indent)
+            + "\t]\n"
+            + ("\t" * indent)
+            + f"\tright: [\n"
+            + f"\t{self.right_operand.pretty_repr(indent + 1)}\n"
+            + ("\t" * indent)
+            + "\t]\n"
+            + ("\t" * indent)
+            + f"\toperation: {self.op_token}\n"
+            + ("\t" * indent)
+            + "]"
         )
-
-    def __repr__(self):
-        return f"({self.left_operand} {self.op_token} {self.right_operand})"
 
 
 class UnaryOpNode(BaseNode):
@@ -68,12 +74,6 @@ class UnaryOpNode(BaseNode):
         self.node = node
 
         super(UnaryOpNode, self).__init__(self.op_token.pos_start, self.node.pos_end)
-
-    def as_struct(self) -> Tuple[str, Any, Token]:
-        return ("UnaryOp", self.node.as_struct(), self.op_token)
-
-    def __repr__(self):
-        return f"({self.op_tok}, {self.node})"
 
 
 class VarNode(BaseNode):
@@ -92,14 +92,26 @@ class VarNode(BaseNode):
             var_id_tok.pos_start, value_node.pos_end if value_node else None
         )
 
-    def as_struct(self) -> Tuple[str, Token, VarType, Optional[Any]]:
-        return ("Variable", self.var_id_tok, self.var_type, self.value_node)
-
-    def __repr__(self):
-        if not self.value_node:
-            return f"Var[name: {self.var_id_tok.ctx}, type: {self.var_type}]"
-        else:
-            return f"Var[name: {self.var_id_tok.ctx}, type: {self.var_type}, value: {self.value_node}]"
+    def pretty_repr(self, indent: int = 0) -> str:
+        return (
+            ("\t" * indent)
+            + f"Var[\n"
+            + ("\t" * indent)
+            + f"\tid: {self.var_id_tok}\n"
+            + ("\t" * indent)
+            + f"\ttype: {self.var_type}\n"
+            + ("\t" * indent)
+            + (
+                f"\tvalue: [\n"
+                + f"{self.value_node.pretty_repr(indent + 2)}\n"
+                + ("\t" * indent)
+                + "\t]\n"
+                if self.value_node
+                else "\n"
+            )
+            + ("\t" * indent)
+            + "]"
+        )
 
 
 class StatementsNode(BaseNode):
@@ -112,14 +124,16 @@ class StatementsNode(BaseNode):
 
         super(StatementsNode, self).__init__(pos_start, pos_end)
 
-    def as_struct(self) -> Tuple[str, List[Any]]:
-        return ("Statements", [statement.as_struct() for statement in self.statements])
-
-    def __repr__(self):
+    def pretty_repr(self, indent: int = 0) -> str:
         return (
-            "Statements[\n\t"
-            + "\n\t".join(str(statement) for statement in self.statements)
-            + "\n]"
+            ("\t" * indent)
+            + "Statements[\n"
+            + (",\n").join(
+                statement.pretty_repr(indent + 1) for statement in self.statements
+            )
+            + "\n"
+            + ("\t" * indent)
+            + "]"
         )
 
 
@@ -136,15 +150,27 @@ class CallNode(BaseNode):
             args[-1].pos_end if len(args) > 0 else callable_node.pos_end,
         )
 
-    def as_struct(self) -> Tuple[str, Any, List[Any]]:
+    def pretty_repr(self, indent: int = 0) -> str:
         return (
-            "Call",
-            self.callable_node.as_struct,
-            [arg.as_struct() for arg in self.args],
+            ("\t" * indent)
+            + "Call[\n"
+            + ("\t" * indent)
+            + f"\tcallable: [\n{self.callable_node.pretty_repr(indent + 2)}\n"
+            + ("\t" * indent)
+            + "\t]\n"
+            + (
+                ("\t" * indent)
+                + "\targs: [\n"
+                + ",\n".join([node.pretty_repr(indent + 2) for node in self.args])
+                + "\n"
+                + ("\t" * indent)
+                + "\t]\n"
+                if self.args
+                else ""
+            )
+            + ("\t" * indent)
+            + "]"
         )
-
-    def __repr__(self):
-        return f"Call[callable: {self.callable_node}, args: [{self.args}]]"
 
 
 class CharNode(BaseNode):
@@ -155,12 +181,6 @@ class CharNode(BaseNode):
 
         super(CharNode, self).__init__(token.pos_start, token.pos_end)
 
-    def as_struct(self) -> Tuple[str, Token]:
-        return ("Char", self.token)
-
-    def __repr__(self):
-        return f"Char[value: {self.token.ctx}]"
-
 
 class StrNode(BaseNode):
     token: Token
@@ -169,12 +189,6 @@ class StrNode(BaseNode):
         self.token = token
 
         super(StrNode, self).__init__(token.pos_start, token.pos_end)
-
-    def as_struct(self) -> Tuple[str, Token]:
-        return ("String", self.token)
-
-    def __repr__(self):
-        return f"String[value: {self.token.ctx}]"
 
 
 class VarAccessNode(BaseNode):
@@ -185,11 +199,8 @@ class VarAccessNode(BaseNode):
 
         super(VarAccessNode, self).__init__(token.pos_start, token.pos_end)
 
-    def as_struct(self) -> Tuple[str, Token]:
-        return ("Access", self.token)
-
-    def __repr__(self):
-        return f"Access[{self.token}]"
+    def pretty_repr(self, indent: int = 0) -> str:
+        return ("\t" * indent) + f"Access[{self.token}]"
 
 
 class ListNode(BaseNode):
@@ -202,12 +213,6 @@ class ListNode(BaseNode):
 
         super(ListNode, self).__init__(pos_start, pos_end)
 
-    def as_struct(self) -> Tuple[str, List[Any]]:
-        return ("ListExpr", [element.as_struct() for element in self.elements])
-
-    def __repr__(self):
-        return "ListExpr[" + ", ".join(str(element) for element in self.elements) + "]"
-
 
 class CommentNode(BaseNode):
     token: Token
@@ -217,12 +222,6 @@ class CommentNode(BaseNode):
 
         super(CommentNode, self).__init__(token.pos_start, token.pos_end)
 
-    def as_struct(self) -> Tuple[str, Token]:
-        return ("Comment", self.token)
-
-    def __repr__(self):
-        return str(self.token)
-
 
 class BoolNode(BaseNode):
     token: Token
@@ -231,12 +230,6 @@ class BoolNode(BaseNode):
         self.token = token
 
         super(BoolNode, self).__init__(token.pos_start, token.pos_end)
-
-    def as_struct(self) -> Tuple[str, Token]:
-        return ("Bool", self.token)
-
-    def __repr__(self):
-        return str(self.token)
 
 
 class FuncDefNode(BaseNode):
@@ -265,27 +258,54 @@ class FuncDefNode(BaseNode):
 
         super(FuncDefNode, self).__init__(func_id_token.pos_start, body.pos_end)
 
-    def as_struct(
-        self,
-    ) -> Tuple[str, Token, List[Token], List[Token], Token, Any, bool]:
+    def pretty_repr(self, indent: int = 0) -> str:
         return (
-            "FuncDefNode",
-            self.func_id_token,
-            self.arg_id_tokens,
-            self.arg_type_tokens,
-            self.ret_type_token,
-            self.body,
-            self.auto_ret,
-        )
-
-    def __repr__(self):
-        return (
-            f"FuncDef[id: {self.func_id_token}\n"
-            f"\targ_ids: {self.arg_id_tokens}\n"
-            f"\targ_types: {self.arg_type_tokens}\n"
-            f"\tret_type: {self.ret_type_token}\n"
-            f"\tbody: {self.body}\n"
-            f"\tauto_ret: {self.auto_ret}\n"
+            ("\t" * indent)
+            + "FuncDef[\n"
+            + ("\t" * indent)
+            + f"\tid: {self.func_id_token}\n"
+            + ("\t" * indent)
+            + (
+                (
+                    f"\targ_ids: ["
+                    + ("\n\t\t" + ("\t" * indent))
+                    + ("\n\t\t" + ("\t" * indent)).join(
+                        [str(token) for token in self.arg_id_tokens]
+                    )
+                    + "\n"
+                    + ("\t" * indent)
+                    + "\t]\n"
+                )
+                + ("\t" * indent)
+                + (
+                    f"\targ_types: ["
+                    + ("\n\t\t" + ("\t" * indent))
+                    + ("\n\t\t" + ("\t" * indent)).join(
+                        [str(token) for token in self.arg_type_tokens]
+                    )
+                    + "\n"
+                    + ("\t" * indent)
+                    + "\t]\n"
+                )
+                + ("\t" * indent)
+                if self.arg_id_tokens
+                else ""
+            )
+            + f"\tret_type: {self.ret_type_token}\n"
+            + ("\t" * indent)
+            + (
+                f"\tbody: [\n"
+                + self.body.pretty_repr(indent + 2)
+                + "\n"
+                + ("\t" * indent)
+                + "\t]\n"
+                if self.body
+                else ""
+            )
+            + ("\t" * indent)
+            + f"\tauto_ret: {self.auto_ret}\n"
+            + ("\t" * indent)
+            + "]"
         )
 
 
@@ -299,5 +319,16 @@ class ReturnNode(BaseNode):
 
         super(ReturnNode, self).__init__(pos_start, pos_end)
 
-    def __repr__(self):
-        return f"Ret[{self.ret_node}]"
+    def pretty_repr(self, indent: int = 0) -> str:
+        return (
+            ("\t" * indent)
+            + "Ret: "
+            + (
+                "[\n"
+                + f"{self.ret_node.pretty_repr(indent + 1)}\n"
+                + ("\t" * indent)
+                + "]"
+                if self.ret_node
+                else "noret"
+            )
+        )

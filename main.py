@@ -75,5 +75,7 @@ if __name__ == "__main__":
         res = parser.parse()
         if res.error:
             print(res.error)
+        elif res.node:
+            print(res.node.pretty_repr())
         else:
-            print(res.node)
+            print("Empty file!")
