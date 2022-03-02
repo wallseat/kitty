@@ -33,7 +33,7 @@ func int_adder(a: int, b: int) -> int { # function
     ret a + b
 }
 
-func bool_and_bool_inline(bool_a: bool, bool_b: bool) -> bool -> ret bool_a and bool_b # inline-like function
+func bool_and_bool_inline(bool_a: bool, bool_b: bool) -> bool -> bool_a and bool_b # inline-like function
 
 func if_expressions() -> noret {
     if ((a == b) and (c == d)) {

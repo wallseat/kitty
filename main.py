@@ -30,6 +30,10 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    "-p-indent", type=int, help="indent count while print AST", default=2
+)
+
+arg_parser.add_argument(
     "file", type=str, help="run kitty interpretor with file as input"
 )
 
@@ -76,6 +80,6 @@ if __name__ == "__main__":
         if res.error:
             print(res.error)
         elif res.node:
-            print(res.node.pretty_repr())
+            print(res.node.pretty_repr(indent=" " * args.p_indent))
         else:
             print("Empty file!")

@@ -14,8 +14,8 @@ class BaseNode:
         self.pos_start = pos_start
         self.pos_end = pos_end
 
-    def pretty_repr(self, indent: int = 0) -> str:
-        return ("\t" * indent) + "[" + self.__class__.__name__ + "]"
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + "[" + self.__class__.__name__ + "]"
 
 
 class NumNode(BaseNode):
@@ -26,8 +26,8 @@ class NumNode(BaseNode):
 
         super(NumNode, self).__init__(token.pos_start, token.pos_end)
 
-    def pretty_repr(self, indent: int = 0) -> str:
-        return ("\t" * indent) + f"Numeric[{self.token}]"
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + f"Numeric[{self.token}]"
 
 
 class BinOpNode(BaseNode):
@@ -44,24 +44,24 @@ class BinOpNode(BaseNode):
 
         super(BinOpNode, self).__init__(left_operand.pos_start, right_operand.pos_end)
 
-    def pretty_repr(self, indent: int = 0) -> str:
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (
-            ("\t" * indent)
+            (indent * ind_c)
             + "BinOp[\n"
-            + ("\t" * indent)
-            + f"\tleft: [\n"
-            + f"\t{self.left_operand.pretty_repr(indent + 1)}\n"
-            + ("\t" * indent)
-            + "\t]\n"
-            + ("\t" * indent)
-            + f"\tright: [\n"
-            + f"\t{self.right_operand.pretty_repr(indent + 1)}\n"
-            + ("\t" * indent)
-            + "\t]\n"
-            + ("\t" * indent)
-            + f"\toperation: {self.op_token}\n"
-            + ("\t" * indent)
-            + "]"
+            + (indent * ind_c)
+            + f"{indent * 2}left: [\n"
+            + f"{indent}{self.left_operand.pretty_repr(ind_c + 2, indent)}\n"
+            + (indent * ind_c)
+            + f"{indent * 2}]\n"
+            + (indent * ind_c)
+            + f"{indent * 2}right: [\n"
+            + f"{indent}{self.right_operand.pretty_repr(ind_c + 2, indent)}\n"
+            + (indent * ind_c)
+            + f"{indent * 2}]\n"
+            + (indent * ind_c)
+            + f"{indent * 2}operation: {self.op_token}\n"
+            + (indent * ind_c)
+            + f"{indent}]"
         )
 
 
@@ -74,6 +74,20 @@ class UnaryOpNode(BaseNode):
         self.node = node
 
         super(UnaryOpNode, self).__init__(self.op_token.pos_start, self.node.pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (
+            (indent * ind_c)
+            + "Unary[\n"
+            + (indent * ind_c)
+            + f"{indent}operation: {self.op_token}\n"
+            + (indent * ind_c)
+            + f"{indent}node: [\n"
+            + self.node.pretty_repr(ind_c + 2, indent)
+            + "\n"
+            + (indent * ind_c)
+            + f"{indent}]"
+        )
 
 
 class VarNode(BaseNode):
@@ -92,24 +106,24 @@ class VarNode(BaseNode):
             var_id_tok.pos_start, value_node.pos_end if value_node else None
         )
 
-    def pretty_repr(self, indent: int = 0) -> str:
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (
-            ("\t" * indent)
+            (indent * ind_c)
             + f"Var[\n"
-            + ("\t" * indent)
-            + f"\tid: {self.var_id_tok}\n"
-            + ("\t" * indent)
-            + f"\ttype: {self.var_type}\n"
-            + ("\t" * indent)
+            + (indent * ind_c)
+            + f"{indent}id: {self.var_id_tok}\n"
+            + (indent * ind_c)
+            + f"{indent}type: {self.var_type}\n"
+            + (indent * ind_c)
             + (
-                f"\tvalue: [\n"
-                + f"{self.value_node.pretty_repr(indent + 2)}\n"
-                + ("\t" * indent)
-                + "\t]\n"
+                f"{indent}value: [\n"
+                + f"{self.value_node.pretty_repr(ind_c + 2, indent)}\n"
+                + (indent * ind_c)
+                + f"{indent}]\n"
                 if self.value_node
                 else "\n"
             )
-            + ("\t" * indent)
+            + (indent * ind_c)
             + "]"
         )
 
@@ -124,15 +138,16 @@ class StatementsNode(BaseNode):
 
         super(StatementsNode, self).__init__(pos_start, pos_end)
 
-    def pretty_repr(self, indent: int = 0) -> str:
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (
-            ("\t" * indent)
+            (indent * ind_c)
             + "Statements[\n"
             + (",\n").join(
-                statement.pretty_repr(indent + 1) for statement in self.statements
+                statement.pretty_repr(ind_c + 1, indent)
+                for statement in self.statements
             )
             + "\n"
-            + ("\t" * indent)
+            + (indent * ind_c)
             + "]"
         )
 
@@ -150,25 +165,27 @@ class CallNode(BaseNode):
             args[-1].pos_end if len(args) > 0 else callable_node.pos_end,
         )
 
-    def pretty_repr(self, indent: int = 0) -> str:
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (
-            ("\t" * indent)
+            (indent * ind_c)
             + "Call[\n"
-            + ("\t" * indent)
-            + f"\tcallable: [\n{self.callable_node.pretty_repr(indent + 2)}\n"
-            + ("\t" * indent)
-            + "\t]\n"
+            + (indent * ind_c)
+            + f"{indent}callable: [\n{self.callable_node.pretty_repr(ind_c + 2, indent)}\n"
+            + (indent * ind_c)
+            + f"{indent}]\n"
             + (
-                ("\t" * indent)
-                + "\targs: [\n"
-                + ",\n".join([node.pretty_repr(indent + 2) for node in self.args])
+                (indent * ind_c)
+                + f"{indent}args: [\n"
+                + ",\n".join(
+                    [node.pretty_repr(ind_c + 2, indent) for node in self.args]
+                )
                 + "\n"
-                + ("\t" * indent)
-                + "\t]\n"
+                + (indent * ind_c)
+                + f"{indent}]\n"
                 if self.args
                 else ""
             )
-            + ("\t" * indent)
+            + (indent * ind_c)
             + "]"
         )
 
@@ -181,6 +198,9 @@ class CharNode(BaseNode):
 
         super(CharNode, self).__init__(token.pos_start, token.pos_end)
 
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + f"Char[{self.token}]"
+
 
 class StrNode(BaseNode):
     token: Token
@@ -189,6 +209,9 @@ class StrNode(BaseNode):
         self.token = token
 
         super(StrNode, self).__init__(token.pos_start, token.pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + f"Char[{self.token}]"
 
 
 class VarAccessNode(BaseNode):
@@ -199,8 +222,8 @@ class VarAccessNode(BaseNode):
 
         super(VarAccessNode, self).__init__(token.pos_start, token.pos_end)
 
-    def pretty_repr(self, indent: int = 0) -> str:
-        return ("\t" * indent) + f"Access[{self.token}]"
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + f"Access[{self.token}]"
 
 
 class ListNode(BaseNode):
@@ -213,6 +236,18 @@ class ListNode(BaseNode):
 
         super(ListNode, self).__init__(pos_start, pos_end)
 
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (
+            (indent * ind_c)
+            + "ListExpr[\n"
+            + ",\n".join(
+                [node.pretty_repr(ind_c + 1, indent) for node in self.elements]
+            )
+            + "\n"
+            + (indent * ind_c)
+            + "]"
+        )
+
 
 class CommentNode(BaseNode):
     token: Token
@@ -222,6 +257,19 @@ class CommentNode(BaseNode):
 
         super(CommentNode, self).__init__(token.pos_start, token.pos_end)
 
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (
+            (indent * ind_c)
+            + "Comment["
+            + (
+                self.token.ctx[:30].replace("\n", "\\n").replace("    ", "\\t")
+                + f"[{len(self.token.ctx) - 30} chars]"
+                if len(self.token.ctx) > 30
+                else self.token.ctx
+            )
+            + "]"
+        )
+
 
 class BoolNode(BaseNode):
     token: Token
@@ -230,6 +278,9 @@ class BoolNode(BaseNode):
         self.token = token
 
         super(BoolNode, self).__init__(token.pos_start, token.pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + f"Bool[{self.token.ctx}]"
 
 
 class FuncDefNode(BaseNode):
@@ -258,53 +309,53 @@ class FuncDefNode(BaseNode):
 
         super(FuncDefNode, self).__init__(func_id_token.pos_start, body.pos_end)
 
-    def pretty_repr(self, indent: int = 0) -> str:
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (
-            ("\t" * indent)
-            + "FuncDef[\n"
-            + ("\t" * indent)
-            + f"\tid: {self.func_id_token}\n"
-            + ("\t" * indent)
+            (indent * ind_c)
+            + "FuncDef: [\n"
+            + (indent * ind_c)
+            + f"{indent}id: {self.func_id_token}\n"
+            + (indent * ind_c)
             + (
                 (
-                    f"\targ_ids: ["
-                    + ("\n\t\t" + ("\t" * indent))
-                    + ("\n\t\t" + ("\t" * indent)).join(
+                    f"{indent}arg_ids: ["
+                    + (f"\n{indent * 2}" + (indent * ind_c))
+                    + (f",\n{indent * 2}" + (indent * ind_c)).join(
                         [str(token) for token in self.arg_id_tokens]
                     )
                     + "\n"
-                    + ("\t" * indent)
-                    + "\t]\n"
+                    + (indent * ind_c)
+                    + f"{indent}]\n"
                 )
-                + ("\t" * indent)
+                + (indent * ind_c)
                 + (
-                    f"\targ_types: ["
-                    + ("\n\t\t" + ("\t" * indent))
-                    + ("\n\t\t" + ("\t" * indent)).join(
+                    f"{indent}arg_types: ["
+                    + (f"\n{indent * 2}" + (indent * ind_c))
+                    + (f",\n{indent * 2}" + (indent * ind_c)).join(
                         [str(token) for token in self.arg_type_tokens]
                     )
                     + "\n"
-                    + ("\t" * indent)
-                    + "\t]\n"
+                    + (indent * ind_c)
+                    + f"{indent}]\n"
                 )
-                + ("\t" * indent)
+                + (indent * ind_c)
                 if self.arg_id_tokens
                 else ""
             )
-            + f"\tret_type: {self.ret_type_token}\n"
-            + ("\t" * indent)
+            + f"{indent}ret_type: {self.ret_type_token}\n"
+            + (indent * ind_c)
             + (
-                f"\tbody: [\n"
-                + self.body.pretty_repr(indent + 2)
+                f"{indent}body: [\n"
+                + self.body.pretty_repr(ind_c + 2, indent)
                 + "\n"
-                + ("\t" * indent)
-                + "\t]\n"
+                + (indent * ind_c)
+                + f"{indent}]\n"
                 if self.body
                 else ""
             )
-            + ("\t" * indent)
-            + f"\tauto_ret: {self.auto_ret}\n"
-            + ("\t" * indent)
+            + (indent * ind_c)
+            + f"{indent}auto_ret: {self.auto_ret}\n"
+            + (indent * ind_c)
             + "]"
         )
 
@@ -319,14 +370,14 @@ class ReturnNode(BaseNode):
 
         super(ReturnNode, self).__init__(pos_start, pos_end)
 
-    def pretty_repr(self, indent: int = 0) -> str:
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (
-            ("\t" * indent)
+            (indent * ind_c)
             + "Ret: "
             + (
                 "[\n"
-                + f"{self.ret_node.pretty_repr(indent + 1)}\n"
-                + ("\t" * indent)
+                + f"{self.ret_node.pretty_repr(ind_c + 1, indent)}\n"
+                + (indent * ind_c)
                 + "]"
                 if self.ret_node
                 else "noret"

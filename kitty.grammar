@@ -24,7 +24,7 @@ factor      : (ADD|SUB) factor
 
 call        : atom (L_BRC (expr (COMMA expr)*)? R_BRC)?
 
-atom        : INT|FLOAT|STR|CHAR|BOOL|IDENTIFIER|COMMENT
+atom        : INT|FLOAT|STR|CHAR|BOOL|IDENTIFIER|COMMENT|E_BLOCK
             : L_BRC expr R_BRC
             : if-expr
             : for-expr

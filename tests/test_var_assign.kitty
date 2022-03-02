@@ -6,4 +6,6 @@ var c: str = "str"
 
 var d: bool = true
 
-var e: Generic = a()
+var e: Generic = a
+
+var f = (5 + 2 / 5)
