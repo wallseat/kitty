@@ -36,12 +36,14 @@ func int_adder(a: int, b: int) -> int { # function
 func bool_and_bool_inline(bool_a: bool, bool_b: bool) -> bool -> bool_a and bool_b # inline-like function
 
 func if_expressions() -> noret {
-    if ((a == b) and (c == d)) {
-        print(" lol \n \" ")
-    } elif ('a' == '\'') {
-        print("never printed")
+    if ((a + 5) < 4) -> (b) | (a + 6 > 9) -> (c or d) else (d)
+
+    if (a + b) > 1 {
+        print(a)
+    } elif (b + c) > 2 {
+        print(b)
     } else {
-        print("ok")
+        print(c)
     }
 }
 

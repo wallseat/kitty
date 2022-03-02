@@ -1,13 +1,17 @@
 import logging
+from cmath import log
+from sre_parse import State
 from typing import Callable, List, Optional, Tuple
 
 from kitty.ast import (
     BaseNode,
     BinOpNode,
     BoolNode,
+    BreakNode,
     CallNode,
     CharNode,
     CommentNode,
+    ContinueNode,
     FuncDefNode,
     ListNode,
     NumNode,
@@ -17,6 +21,7 @@ from kitty.ast import (
     UnaryOpNode,
     VarAccessNode,
     VarNode,
+    WhileNode,
 )
 from kitty.errors import Error, InvalidSyntaxError, NotImplementedError
 from kitty.symbol_table import SymTable
@@ -161,6 +166,33 @@ class Parser:
         logging.debug("Parse statement")
 
         res = ParseResult()
+
+        if self.cur_tok.type == TokenType.FUNC:  # func define
+            func_def = res.register_result(self.parse_func_def())
+            if res.error or not func_def:
+                return res
+
+            logging.debug(f"Parsed func def, id: {func_def.func_id_token}")  # type: ignore
+
+            return res.register_success(func_def)
+
+        elif self.cur_tok.type == TokenType.VAR:  # var define
+            var_assign = res.register_result(self.parse_var_def())
+            if res.error:
+                return res
+
+            return res.register_success(var_assign)  # type: ignore
+
+        expr = res.register_result(self.parse_expr())
+        if res.error or not expr:
+            return res
+
+        return res.register_success(expr)
+
+    def parse_expr(self) -> ParseResult:
+        logging.debug("Parse expr")
+
+        res = ParseResult()
         pos_start = self.cur_tok.pos_start.copy()
 
         if self.cur_tok.type == TokenType.RET:
@@ -176,41 +208,20 @@ class Parser:
                     self.retreat(res.last_registered_advancements)
 
             return res.register_success(
-                ReturnNode(expr, pos_start, self.cur_tok.pos_start.copy())
+                ReturnNode(expr, pos_start, self.cur_tok.pos_end.copy())
             )
 
-        elif self.cur_tok.type == TokenType.FUNC:
-            func_def = res.register_result(self.parse_func_def())
-            if res.error or not func_def:
-                return res
-
-            logging.debug(f"Parsed func def, id: {func_def.func_id_token}")  # type: ignore
-
-            return res.register_success(func_def)
-
-        elif self.cur_tok.type == TokenType.VAR:  # var assgin
-            var_assign = res.register_result(self.parse_var_assign())
-            if res.error:
-                return res
-
-            return res.register_success(var_assign)  # type: ignore
-
         elif self.cur_tok.type == TokenType.BREAK:
-            raise NotImplementedError
+            self.advance(res)
+            return res.register_success(
+                BreakNode(pos_start, self.cur_tok.pos_end.copy())
+            )
 
         elif self.cur_tok.type == TokenType.CONTINUE:
-            raise NotImplementedError
-
-        expr = res.register_result(self.parse_expr())
-        if res.error or not expr:
-            return res
-
-        return res.register_success(expr)
-
-    def parse_expr(self) -> ParseResult:
-        logging.debug("Parse expr")
-
-        res = ParseResult()
+            self.advance(res)
+            return res.register_success(
+                ContinueNode(pos_start, self.cur_tok.pos_end.copy())
+            )
 
         node = res.register_result(
             self.parse_bin_op(self.parse_comp_expr, (TokenType.OR, TokenType.AND))
@@ -223,10 +234,19 @@ class Parser:
 
         return res.register_success(node)
 
-    def parse_var_assign(self) -> ParseResult:
+    def parse_var_def(self) -> ParseResult:
         logging.debug("Parse var assignment")
 
         res = ParseResult()
+
+        if self.cur_tok.type != TokenType.VAR:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected var",
+                )
+            )
 
         self.advance(res)
 
@@ -235,7 +255,7 @@ class Parser:
                 InvalidSyntaxError(
                     self.cur_tok.pos_start,
                     self.cur_tok.pos_end,
-                    details="Expected identity",
+                    details="Expected identifier",
                 )
             )
 
@@ -288,7 +308,7 @@ class Parser:
 
         # self.symbol_table_stack[-1].set(var_id_tok.ctx, (var_type, var_expr))
 
-        return res.register_success(VarNode(var_id_tok, var_type, var_expr))  # type: ignore
+        return res.register_success(VarNode(var_id_tok, var_type, var_expr, True))  # type: ignore
 
     def parse_comp_expr(self) -> ParseResult:
         logging.debug("Parse comp expr")
@@ -456,11 +476,13 @@ class Parser:
             return res.register_success(VarAccessNode(tok))
 
         elif tok.type == TokenType.IDENTIFIER:
-            self.advance(res)
+            node = res.register_result(self.parse_var_access())
+            if res.error or not node:
+                return res
 
-            logging.debug(f"Parsed identifier")
+            logging.debug("Parsed var access/assign")
 
-            return res.register_success(VarAccessNode(tok))
+            return res.register_success(node)
 
         elif tok.type == TokenType.L_BRC:
             self.advance(res)
@@ -566,6 +588,56 @@ class Parser:
 
         return res.register_success(left)
 
+    def parse_var_access(self) -> ParseResult:
+        res = ParseResult()
+
+        if self.cur_tok.type != TokenType.IDENTIFIER:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected identifier",
+                )
+            )
+
+        var_id_tok = self.cur_tok
+
+        self.advance(res)
+
+        if self.cur_tok.type == TokenType.ASSIGN:
+            assign_node = res.register_result(self.parse_var_assign(var_id_tok))
+
+            if res.error or not assign_node:
+                return res
+
+            logging.debug("Parsed var assign")
+
+            return res.register_success(assign_node)
+
+        logging.debug("Parsed var access")
+        return res.register_success(VarAccessNode(var_id_tok))
+
+    def parse_var_assign(self, var_id_tok: Token) -> ParseResult:
+        res = ParseResult()
+
+        if self.cur_tok.type != TokenType.ASSIGN:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected '='",
+                )
+            )
+
+        self.advance(res)
+
+        expr = res.register_result(self.parse_expr())
+
+        if res.error or not expr:
+            return res
+
+        return res.register_success(VarNode(var_id_tok, VarType.UNTYPED, expr, False))  # type: ignore
+
     def parse_list_expr(self) -> ParseResult:
         logging.debug("Parse list expr")
 
@@ -628,7 +700,62 @@ class Parser:
         raise NotImplementedError
 
     def parse_while_expr(self) -> ParseResult:
-        raise NotImplementedError
+        res = ParseResult()
+
+        if self.cur_tok.type != TokenType.WHILE:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected while",
+                )
+            )
+
+        self.advance(res)
+
+        condition = res.register_result(self.parse_expr())
+        body = None
+
+        if res.error or not condition:
+            return res
+
+        if self.cur_tok.type == TokenType.R_ARROW:
+            self.advance(res)
+
+            body = res.register_result(self.parse_expr())
+
+            if res.error or not body:
+                return res
+
+        elif self.cur_tok.type == TokenType.S_BLOCK:
+            self.advance(res)
+
+            body = res.register_result(self.parse_statements())
+
+            if res.error or not body:
+                return res
+
+            if self.cur_tok.type != TokenType.E_BLOCK:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        details="Expected '}'",
+                    )
+                )
+
+            self.advance(res)
+
+        else:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected '->' or '{'",
+                )
+            )
+
+        return res.register_success(WhileNode(condition, body))
 
     def parse_func_def(self) -> ParseResult:
         logging.debug("Parse func def")

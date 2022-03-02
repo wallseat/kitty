@@ -94,13 +94,19 @@ class VarNode(BaseNode):
     var_id_tok: Token
     value_node: Optional[BaseNode]
     var_type: VarType
+    is_define: bool
 
     def __init__(
-        self, var_id_tok: Token, var_type: VarType, value_node: Optional[BaseNode]
+        self,
+        var_id_tok: Token,
+        var_type: VarType,
+        value_node: Optional[BaseNode],
+        is_define: bool,
     ):
         self.var_id_tok = var_id_tok
         self.value_node = value_node
         self.var_type = var_type
+        self.is_define = is_define
 
         super(VarNode, self).__init__(
             var_id_tok.pos_start, value_node.pos_end if value_node else None
@@ -123,6 +129,8 @@ class VarNode(BaseNode):
                 if self.value_node
                 else "\n"
             )
+            + (indent * ind_c)
+            + f"{indent}is_define: {self.is_define}\n"
             + (indent * ind_c)
             + "]"
         )
@@ -382,4 +390,57 @@ class ReturnNode(BaseNode):
                 if self.ret_node
                 else "noret"
             )
+        )
+
+
+class BreakNode(BaseNode):
+    def __init__(self, pos_start: Position, pos_end: Position):
+        super(BreakNode, self).__init__(pos_start, pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + "Break"
+
+
+class ContinueNode(BaseNode):
+    def __init__(self, pos_start: Position, pos_end: Position):
+        super(ContinueNode, self).__init__(pos_start, pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + "Continue"
+
+
+class WhileNode(BaseNode):
+    condition: BaseNode
+    body: Optional[BaseNode]
+
+    def __init__(self, condition: BaseNode, body: Optional[BaseNode]):
+        self.condition = condition
+        self.body = body
+
+        super(WhileNode, self).__init__(
+            condition.pos_start, body.pos_end if body else condition.pos_end
+        )
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (
+            (indent * ind_c)
+            + "WhileExpr[\n"
+            + (indent * ind_c)
+            + f"{indent}condition: [\n"
+            + self.condition.pretty_repr(ind_c + 2, indent)
+            + "\n"
+            + (indent * ind_c)
+            + f"{indent}]\n"
+            + (
+                (indent * ind_c)
+                + f"{indent}body: [\n"
+                + self.body.pretty_repr(ind_c + 2, indent)
+                + "\n"
+                + (indent * ind_c)
+                + f"{indent}]\n"
+                if self.body
+                else "\n"
+            )
+            + (indent * ind_c)
+            + "]"
         )
