@@ -50,7 +50,10 @@ if-expr-c   : KEYWORD:else
               R_ARROW expr
             | (S_BLOCK statements E_BLOCK)
 
-for-expr    : KEYWORD:for var-assign KEYWORD:in expr R_ARROW expr
+for-expr    : KEYWORD:for 
+              (L_BRC var-access KEYWORD:in expr R_BRC) 
+            | (var-access KEYWORD:in expr) 
+              R_ARROW expr
             | (S_BLOCK statements E_BLOCK)
 
 while-expr  : KEYWORD:while expr

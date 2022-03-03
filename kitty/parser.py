@@ -22,6 +22,7 @@ from kitty.ast import (
     VarAccessNode,
     VarNode,
     WhileNode,
+    ForNode
 )
 from kitty.errors import Error, InvalidSyntaxError, NotImplementedError
 from kitty.symbol_table import SymTable
@@ -665,7 +666,7 @@ class Parser:
                             InvalidSyntaxError(
                                 self.cur_tok.pos_start,
                                 self.cur_tok.pos_end,
-                                "Expected ...",
+                                "Expected elements (int, float, bool, str, char or expr)",
                             )
                         )
                     else:
@@ -697,8 +698,100 @@ class Parser:
         raise NotImplementedError
 
     def parse_for_expr(self) -> ParseResult:
-        raise NotImplementedError
+        res = ParseResult()
+        
+        if self.cur_tok.type != TokenType.FOR:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected 'for'"
+                )
+            )
+        
+        self.advance(res)
+        
+        with_brc = False
+        
+        if self.cur_tok.type == TokenType.L_BRC:
+            self.advance(res)
+            with_brc = True
+        
+        var_node = res.register_result(self.parse_var_def())
+        
+        if res.error or not var_node:
+            return res
+        
+        if self.cur_tok.type != TokenType.IN:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected 'in'"
+                )
+            )
+        
+        self.advance(res)
+        
+        iter_expr = res.register_result(self.parse_expr())
+                
+        if res.error or not iter_expr:
+            return res
+        
+        if with_brc:
+            if self.cur_tok.type != TokenType.R_BRC:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        details="Expected ')'"
+                    )
+                )
+                
+            self.advance(res)
+        
+        body = None
+        if self.cur_tok.type == TokenType.R_ARROW:
+            self.advance(res)
+            
+            body = res.register_result(self.parse_expr())
+            
+            if res.error or not body:
+                return res
+        
+        elif self.cur_tok.type == TokenType.S_BLOCK:
+            self.advance(res)
+            
+            body = res.register_result(self.parse_statements())
+            
+            if res.error or not body:
+                return res
+            
+            if self.cur_tok.type != TokenType.E_BLOCK:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        details="Expected '}'",
+                    )
+                )
 
+            self.advance(res) 
+            
+        
+        else:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected '->' or '{'",
+                )
+            )
+        
+        
+        return res.register_success(ForNode(var_node, iter_expr, body))
+            
+            
     def parse_while_expr(self) -> ParseResult:
         res = ParseResult()
 
@@ -707,7 +800,7 @@ class Parser:
                 InvalidSyntaxError(
                     self.cur_tok.pos_start,
                     self.cur_tok.pos_end,
-                    details="Expected while",
+                    details="Expected 'while'",
                 )
             )
 

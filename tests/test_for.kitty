@@ -1,0 +1,13 @@
+for (var i: int in [1, 2, 3, 4, 5]) -> print(i)
+
+for var a: str in d -> __syscall(1, 2, a)
+
+for (var idx: int in range(len(c))) {
+    print(idx)
+}
+
+for (var i: int in range(100)) {
+    for (var j: int in range(100)) {
+        print(i, j)
+    }
+}

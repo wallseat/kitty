@@ -117,17 +117,17 @@ class VarNode(BaseNode):
             (indent * ind_c)
             + f"Var[\n"
             + (indent * ind_c)
-            + f"{indent}id: {self.var_id_tok}\n"
+            + f"{indent}id: {self.var_id_tok},\n"
             + (indent * ind_c)
-            + f"{indent}type: {self.var_type}\n"
-            + (indent * ind_c)
+            + f"{indent}type: {self.var_type},\n"
             + (
-                f"{indent}value: [\n"
+                (indent * ind_c)
+                + f"{indent}value: [\n"
                 + f"{self.value_node.pretty_repr(ind_c + 2, indent)}\n"
                 + (indent * ind_c)
-                + f"{indent}]\n"
+                + f"{indent}],\n"
                 if self.value_node
-                else "\n"
+                else ""
             )
             + (indent * ind_c)
             + f"{indent}is_define: {self.is_define}\n"
@@ -441,6 +441,45 @@ class WhileNode(BaseNode):
                 if self.body
                 else "\n"
             )
+            + (indent * ind_c)
+            + "]"
+        )
+
+
+class ForNode(BaseNode):
+    var_node: BaseNode
+    iter_expr: BaseNode
+    body: BaseNode
+
+    def __init__(self, var_node: BaseNode, iter_expr: BaseNode, body: BaseNode):
+        self.var_node = var_node
+        self.iter_expr = iter_expr
+        self.body = body
+
+        super(ForNode, self).__init__(var_node.pos_start, body.pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (
+            (indent * ind_c)
+            + "ForExpr[\n"
+            + (indent * ind_c)
+            + f"{indent}var: [\n"
+            + self.var_node.pretty_repr(ind_c + 2, indent)
+            + "\n"
+            + (indent * ind_c)
+            + f"{indent}]\n"
+            + (indent * ind_c)
+            + f"{indent}iter_expr: [\n"
+            + self.iter_expr.pretty_repr(ind_c + 2, indent)
+            + "\n"
+            + (indent * ind_c)
+            + f"{indent}]\n"
+            + (indent * ind_c)
+            + f"{indent}body: [\n"
+            + self.body.pretty_repr(ind_c + 2, indent)
+            + "\n"
+            + (indent * ind_c)
+            + f"{indent}]\n"
             + (indent * ind_c)
             + "]"
         )
