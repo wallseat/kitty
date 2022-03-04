@@ -9,3 +9,5 @@ var d: bool = true
 var e: Generic = a
 
 var f = (5 + 2 / 5)
+
+var g: wow_type

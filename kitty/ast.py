@@ -61,7 +61,7 @@ class BinOpNode(BaseNode):
             + (indent * ind_c)
             + f"{indent * 2}operation: {self.op_token}\n"
             + (indent * ind_c)
-            + f"{indent}]"
+            + f"]"
         )
 
 
@@ -482,4 +482,76 @@ class ForNode(BaseNode):
             + f"{indent}]\n"
             + (indent * ind_c)
             + "]"
+        )
+
+
+class IfNode(BaseNode):
+    cases: List[Tuple[BaseNode, Optional[BaseNode]]]  # (condition, expr|statements)
+    else_case: Optional[BaseNode]
+
+    def __init__(
+        self,
+        cases: List[Tuple[BaseNode, Optional[BaseNode]]],
+        else_case: Optional[BaseNode] = None,
+    ):
+        self.cases = cases
+        self.else_case = else_case
+
+        super(IfNode, self).__init__(
+            cases[0][0].pos_start,
+            else_case.pos_end
+            if else_case
+            else cases[-1][1].pos_end
+            if cases[-1][1]
+            else cases[-1][0].pos_end,
+        )
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (
+            (indent * ind_c)
+            + "IfExpr[\n"
+            + (indent * ind_c)
+            + f"{indent}cases: [\n"
+            + ",\n".join(
+                [
+                    (indent * ind_c)
+                    + f"{indent * 2}case {idx}: [\n"
+                    + (indent * ind_c)
+                    + f"{indent * 3}condition: [\n"
+                    + condition.pretty_repr(ind_c + 4, indent)
+                    + "\n"
+                    + (indent * ind_c)
+                    + f"{indent * 3}],\n"
+                    + (indent * ind_c)
+                    + (
+                        f"{indent * 3}body: [\n"
+                        + body.pretty_repr(ind_c + 4, indent)
+                        + "\n"
+                        + (indent * ind_c)
+                        + f"{indent * 3}]"
+                        + "\n"
+                        if body
+                        else ""
+                    )
+                    + (indent * ind_c)
+                    + f"{indent * 2}]"
+                    for idx, (condition, body) in enumerate(self.cases, start=1)
+                ]
+            )
+            + "\n"
+            + (indent * ind_c)
+            + f"{indent}]"
+            + (
+                ",\n"
+                + (indent * ind_c)
+                + f"{indent}else_case: [\n"
+                + self.else_case.pretty_repr(ind_c + 2, indent)
+                + "\n"
+                + (indent * ind_c)
+                + f"{indent}]\n"
+                if self.else_case
+                else "\n"
+            )
+            + (indent * ind_c)
+            + f"]"
         )

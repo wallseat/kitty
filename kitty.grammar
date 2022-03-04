@@ -38,21 +38,21 @@ var-assign  : var-access ASSIGN expr
 
 list-expr   : L_SQUARE (expr (COMMA expr)*)? R_SQUARE
 
-if-expr     : KEYWORD:if expr
-              R_ARROW (expr if-expr-b|if-expr-c?)
-            | (S_BLOCK statements E_BLOCK|if-expr-b|if-expr-c)
+if-expr-a   : KEYWORD:if expr R_ARROW expr (if-expr-d|if-expr-e)?
+            | (S_BLOCK statements E_BLOCK (if-expr-b|if-expr-c)?)
 
 if-expr-b   : KEYWORD:elif expr
-              R_ARROW (expr if-expr-b|if-expr-c?)
-            | (S_BLOCK statements E_BLOCK|if-expr-b|if-expr-c)
+              S_BLOCK statements E_BLOCK (if-expr-b|if-expr-c)?
 
-if-expr-c   : KEYWORD:else
-              R_ARROW expr
-            | (S_BLOCK statements E_BLOCK)
+if-expr-c   : KEYWORD:else S_BLOCK statements E_BLOCK
 
-for-expr    : KEYWORD:for 
-              (L_BRC var-access KEYWORD:in expr R_BRC) 
-            | (var-access KEYWORD:in expr) 
+if-expr-d   : KEYWORD:elif R_ARROW expr (if-expr-d|if-expr-e)?
+
+if-expr-e   : KEYWORD:else R_ARROW expr
+
+for-expr    : KEYWORD:for
+              (L_BRC var-access KEYWORD:in expr R_BRC)
+            | (var-access KEYWORD:in expr)
               R_ARROW expr
             | (S_BLOCK statements E_BLOCK)
 

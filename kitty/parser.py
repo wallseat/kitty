@@ -1,7 +1,5 @@
 import logging
-from cmath import log
-from sre_parse import State
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Union
 
 from kitty.ast import (
     BaseNode,
@@ -12,7 +10,9 @@ from kitty.ast import (
     CharNode,
     CommentNode,
     ContinueNode,
+    ForNode,
     FuncDefNode,
+    IfNode,
     ListNode,
     NumNode,
     ReturnNode,
@@ -22,7 +22,6 @@ from kitty.ast import (
     VarAccessNode,
     VarNode,
     WhileNode,
-    ForNode
 )
 from kitty.errors import Error, InvalidSyntaxError, NotImplementedError
 from kitty.symbol_table import SymTable
@@ -524,7 +523,7 @@ class Parser:
             return res.register_success(CommentNode(tok))
 
         elif tok.type == TokenType.IF:
-            if_expr = res.register_result(self.parse_if_expr())
+            if_expr = res.register_result(self.parse_if_expr_a())
             if res.error or not if_expr:
                 return res
 
@@ -694,79 +693,63 @@ class Parser:
             ListNode(elements, pos_start, self.cur_tok.pos_end.copy())
         )
 
-    def parse_if_expr(self) -> ParseResult:
-        raise NotImplementedError
-
-    def parse_for_expr(self) -> ParseResult:
+    def parse_if_expr_a(self) -> ParseResult:
         res = ParseResult()
-        
-        if self.cur_tok.type != TokenType.FOR:
+
+        if self.cur_tok.type != TokenType.IF:
             return res.register_failure(
                 InvalidSyntaxError(
                     self.cur_tok.pos_start,
                     self.cur_tok.pos_end,
-                    details="Expected 'for'"
+                    details="Expected 'if'",
                 )
             )
-        
+
         self.advance(res)
-        
-        with_brc = False
-        
-        if self.cur_tok.type == TokenType.L_BRC:
-            self.advance(res)
-            with_brc = True
-        
-        var_node = res.register_result(self.parse_var_def())
-        
-        if res.error or not var_node:
+
+        cases: List[Tuple[BaseNode, Optional[BaseNode]]] = []
+        else_case: Optional[BaseNode] = None
+
+        condition = res.register_result(self.parse_expr())
+
+        if res.error or not condition:
             return res
-        
-        if self.cur_tok.type != TokenType.IN:
-            return res.register_failure(
-                InvalidSyntaxError(
-                    self.cur_tok.pos_start,
-                    self.cur_tok.pos_end,
-                    details="Expected 'in'"
-                )
-            )
-        
-        self.advance(res)
-        
-        iter_expr = res.register_result(self.parse_expr())
-                
-        if res.error or not iter_expr:
-            return res
-        
-        if with_brc:
-            if self.cur_tok.type != TokenType.R_BRC:
-                return res.register_failure(
-                    InvalidSyntaxError(
-                        self.cur_tok.pos_start,
-                        self.cur_tok.pos_end,
-                        details="Expected ')'"
-                    )
-                )
-                
+
+        if self.cur_tok.type == TokenType.R_ARROW:  # inline like syntax
             self.advance(res)
-        
-        body = None
-        if self.cur_tok.type == TokenType.R_ARROW:
-            self.advance(res)
-            
-            body = res.register_result(self.parse_expr())
-            
-            if res.error or not body:
+
+            expr = res.register_result(self.parse_expr())
+
+            if res.error or not expr:
                 return res
-        
-        elif self.cur_tok.type == TokenType.S_BLOCK:
+
+            cases.append((condition, expr))
+
+            while self.cur_tok.type == TokenType.ELIF:
+                case_or_res = self.parse_if_expr_d()
+
+                if isinstance(case_or_res, ParseResult):  # an error
+                    res.register_result(case_or_res)
+                    return res
+
+                cases.append(case_or_res)
+
+            if self.cur_tok.type == TokenType.ELSE:
+                else_case = res.register_result(self.parse_if_expr_e())
+
+                if res.error or not else_case:
+                    return res
+
+        elif self.cur_tok.type == TokenType.S_BLOCK:  # base syntax
             self.advance(res)
-            
-            body = res.register_result(self.parse_statements())
-            
-            if res.error or not body:
+
+            statements = res.register_result(self.parse_statements())
+
+            if res.error or not statements:
                 return res
-            
+
+            cases.append((condition, statements))
+
             if self.cur_tok.type != TokenType.E_BLOCK:
                 return res.register_failure(
                     InvalidSyntaxError(
@@ -776,9 +759,258 @@ class Parser:
                     )
                 )
 
-            self.advance(res) 
-            
-        
+            self.advance(res)
+
+            while self.cur_tok.type == TokenType.ELIF:
+                case_or_res = self.parse_if_expr_b()
+
+                if isinstance(case_or_res, ParseResult):  # an error
+                    res.register_result(case_or_res)
+                    return res
+
+                cases.append(case_or_res)
+
+            if self.cur_tok.type == TokenType.ELSE:
+                else_case = res.register_result(self.parse_if_expr_c())
+
+                if res.error or not else_case:
+                    return res
+
+        return res.register_success(IfNode(cases, else_case))
+
+    def parse_if_expr_b(self) -> Union[ParseResult, Tuple[BaseNode, BaseNode]]:
+        res = ParseResult()
+
+        if self.cur_tok.type != TokenType.ELIF:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected 'elif'",
+                )
+            )
+
+        self.advance(res)
+
+        condition = res.register_result(self.parse_expr())
+
+        if res.error or not condition:
+            return res
+
+        if self.cur_tok.type != TokenType.S_BLOCK:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start, self.cur_tok.pos_end, details="Expected '{'"
+                )
+            )
+
+        self.advance(res)
+
+        statements = res.register_result(self.parse_statements())
+
+        if res.error or not statements:
+            return res
+
+        if self.cur_tok.type != TokenType.E_BLOCK:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start, self.cur_tok.pos_end, details="Expected '}'"
+                )
+            )
+
+        self.advance(res)
+
+        return (condition, statements)
+
+    def parse_if_expr_c(self) -> ParseResult:
+        res = ParseResult()
+
+        if self.cur_tok.type != TokenType.ELSE:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected 'else'",
+                )
+            )
+
+        self.advance(res)
+
+        if self.cur_tok.type != TokenType.S_BLOCK:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start, self.cur_tok.pos_end, details="Expected '{'"
+                )
+            )
+
+        self.advance(res)
+
+        statements = res.register_result(self.parse_statements())
+
+        if res.error or not statements:
+            return res
+
+        if self.cur_tok.type != TokenType.E_BLOCK:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start, self.cur_tok.pos_end, details="Expected '}'"
+                )
+            )
+
+        self.advance(res)
+
+        return res.register_success(statements)
+
+    def parse_if_expr_d(self) -> Union[ParseResult, Tuple[BaseNode, BaseNode]]:
+        res = ParseResult()
+
+        if self.cur_tok.type != TokenType.ELIF:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected 'elif'",
+                )
+            )
+
+        self.advance(res)
+
+        condition = res.register_result(self.parse_expr())
+
+        if res.error or not condition:
+            return res
+
+        if self.cur_tok.type != TokenType.R_ARROW:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected '->'",
+                )
+            )
+
+        self.advance(res)
+
+        expr = res.register_result(self.parse_expr())
+
+        if res.error or not expr:
+            return res
+
+        return (condition, expr)
+
+    def parse_if_expr_e(self) -> ParseResult:
+        res = ParseResult()
+
+        if self.cur_tok.type != TokenType.ELSE:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected 'else'",
+                )
+            )
+
+        self.advance(res)
+
+        if self.cur_tok.type != TokenType.R_ARROW:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected '->'",
+                )
+            )
+
+        self.advance(res)
+
+        expr = res.register_result(self.parse_expr())
+
+        if res.error or not expr:
+            return res
+
+        return res.register_success(expr)
+
+    def parse_for_expr(self) -> ParseResult:
+        res = ParseResult()
+
+        if self.cur_tok.type != TokenType.FOR:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected 'for'",
+                )
+            )
+
+        self.advance(res)
+
+        with_brc = False
+
+        if self.cur_tok.type == TokenType.L_BRC:
+            self.advance(res)
+            with_brc = True
+
+        var_node = res.register_result(self.parse_var_def())
+
+        if res.error or not var_node:
+            return res
+
+        if self.cur_tok.type != TokenType.IN:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected 'in'",
+                )
+            )
+
+        self.advance(res)
+
+        iter_expr = res.register_result(self.parse_expr())
+
+        if res.error or not iter_expr:
+            return res
+
+        if with_brc:
+            if self.cur_tok.type != TokenType.R_BRC:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        details="Expected ')'",
+                    )
+                )
+
+            self.advance(res)
+
+        body = None
+        if self.cur_tok.type == TokenType.R_ARROW:
+            self.advance(res)
+
+            body = res.register_result(self.parse_expr())
+
+            if res.error or not body:
+                return res
+
+        elif self.cur_tok.type == TokenType.S_BLOCK:
+            self.advance(res)
+
+            body = res.register_result(self.parse_statements())
+
+            if res.error or not body:
+                return res
+
+            if self.cur_tok.type != TokenType.E_BLOCK:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        self.cur_tok.pos_start,
+                        self.cur_tok.pos_end,
+                        details="Expected '}'",
+                    )
+                )
+
+            self.advance(res)
+
         else:
             return res.register_failure(
                 InvalidSyntaxError(
@@ -787,11 +1019,9 @@ class Parser:
                     details="Expected '->' or '{'",
                 )
             )
-        
-        
+
         return res.register_success(ForNode(var_node, iter_expr, body))
-            
-            
+
     def parse_while_expr(self) -> ParseResult:
         res = ParseResult()
 

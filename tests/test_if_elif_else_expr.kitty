@@ -1,0 +1,32 @@
+if a > b -> hello(a) elif c > b -> hello(c) else -> hello(b)
+
+if a < b -> hello(a) elif c < b -> hello(c) elif d < c -> hello(d)
+
+if a < b -> hello(a) elif c < b -> hello(c) elif d < c -> hello(d) else -> print(5)
+
+if (1 + 1 != 2) {
+    print("Never printed!")
+
+} elif (2 * 2 == 5) {
+    print("Never printed too!")
+} else {
+    print("Hello!")
+}
+
+if (False) {
+    no()
+} elif (False) {
+    no_again()
+} elif (True) {
+    yes()
+}
+
+if (False) {
+    no()
+} elif (False) {
+    no_again()
+} elif (True) {
+    yes()
+} else {
+    no_no_no()
+}
