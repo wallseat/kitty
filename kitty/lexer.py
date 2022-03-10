@@ -2,7 +2,6 @@ import string
 
 from kitty.errors import IllegalCharError
 from kitty.position import Position
-from kitty.symbol_table import SymTable
 from kitty.token import Token, TokenType
 
 
@@ -11,13 +10,11 @@ class Lexer:
     fname: str
     pos: Position
     cur_let: str
-    symbol_table: SymTable
 
     def __init__(self, fname: str, text: str):
         self.text = text
         self.fname = fname
         self.pos = Position(-1, 0, -1, fname, text)
-        self.symbol_table = SymTable()
 
         self.cur_let = ""
         self.advance()
@@ -31,7 +28,7 @@ class Lexer:
     def tokenize(self):
         tokens = []
 
-        while self.cur_let != None:
+        while self.cur_let is not None:
             if self.cur_let in " \t":
                 self.advance()
 
@@ -129,7 +126,7 @@ class Lexer:
 
                 if char == "\\":
                     self.advance()
-                    if self.cur_let in ("'"):
+                    if self.cur_let in "'":
                         char = self.cur_let
                     else:
                         char += self.cur_let
@@ -166,7 +163,7 @@ class Lexer:
         num_str = ""
         dot_count = 0
 
-        while self.cur_let != None and self.cur_let in string.digits + "." + "f":
+        while self.cur_let is not None and self.cur_let in string.digits + "." + "f":
             if self.cur_let == ".":
                 if dot_count == 1:
                     break
@@ -203,7 +200,7 @@ class Lexer:
         self.advance()
 
         string = ""
-        while self.cur_let != None:
+        while self.cur_let is not None:
             if self.cur_let == "\\":
                 self.advance()
                 if self.cur_let == '"':
@@ -227,7 +224,7 @@ class Lexer:
         self.advance()
         comment_str = ""
 
-        while self.cur_let != None and self.cur_let != "\n":
+        while self.cur_let is not None and self.cur_let != "\n":
             comment_str += self.cur_let
             self.advance()
 
@@ -250,7 +247,7 @@ class Lexer:
 
             comment_str = ""
             prev_let = ""
-            while self.cur_let != None:
+            while self.cur_let is not None:
                 if self.cur_let == "/" and prev_let == "*":
                     comment_str = comment_str[:-1]
                     break
@@ -321,7 +318,7 @@ class Lexer:
         start_pos = self.pos.copy()
         identity = ""
 
-        while self.cur_let != None and self.cur_let in string.ascii_letters + "_":
+        while self.cur_let is not None and self.cur_let in string.ascii_letters + "_":
             identity += self.cur_let
             self.advance()
 
@@ -378,7 +375,6 @@ class Lexer:
             return Token(TokenType.BREAK, pos_start=start_pos, pos_end=self.pos)
 
         else:
-            self.symbol_table.set(identity, None)
             return Token(
                 TokenType.IDENTIFIER,
                 pos_start=start_pos,

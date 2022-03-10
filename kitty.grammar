@@ -19,7 +19,7 @@ arith-expr  : term ((ADD|SUB) term)*
 
 term        : factor ((MUL|DIV) factor)*
 
-factor      : (ADD|SUB) factor
+factor      : (ADD|SUB) factor 
             : call
 
 call        : atom (L_BRC (expr (COMMA expr)*)? R_BRC)?

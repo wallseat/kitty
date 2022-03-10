@@ -1,36 +1,85 @@
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from kitty.position import Position
 from kitty.token import Token, VarType
+
+from kitty.symbol_table import SymbolTable
 
 
 class BaseNode:
     pos_start: Optional[Position]
     pos_end: Optional[Position]
 
+    sym_table: Optional[SymbolTable]
+
     def __init__(
         self, pos_start: Optional[Position] = None, pos_end: Optional[Position] = None
     ):
         self.pos_start = pos_start
         self.pos_end = pos_end
+        self.sym_table = None
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (indent * ind_c) + "[" + self.__class__.__name__ + "]"
 
 
-class NumNode(BaseNode):
+class ValueNode(BaseNode):
+    token: Token
+
+
+class NumericNode(ValueNode):
     token: Token
 
     def __init__(self, token: Token):
         self.token = token
 
-        super(NumNode, self).__init__(token.pos_start, token.pos_end)
+        super(NumericNode, self).__init__(token.pos_start, token.pos_end)
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (indent * ind_c) + f"Numeric[{self.token}]"
 
 
-class BinOpNode(BaseNode):
+class CharNode(ValueNode):
+    token: Token
+
+    def __init__(self, token: Token):
+        self.token = token
+
+        super(CharNode, self).__init__(token.pos_start, token.pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + f"Char[{self.token}]"
+
+
+class StrNode(ValueNode):
+    token: Token
+
+    def __init__(self, token: Token):
+        self.token = token
+
+        super(StrNode, self).__init__(token.pos_start, token.pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + f"Char[{self.token}]"
+
+
+class BoolNode(ValueNode):
+    token: Token
+
+    def __init__(self, token: Token):
+        self.token = token
+
+        super(BoolNode, self).__init__(token.pos_start, token.pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (indent * ind_c) + f"Bool[{self.token.ctx}]"
+
+
+class ExprNode(BaseNode):
+    type: VarType
+
+
+class BinOpNode(ExprNode):
     op_token: Token
     left_operand: BaseNode
     right_operand: BaseNode
@@ -65,7 +114,7 @@ class BinOpNode(BaseNode):
         )
 
 
-class UnaryOpNode(BaseNode):
+class UnaryOpNode(ExprNode):
     op_token: Token
     node: BaseNode
 
@@ -92,7 +141,7 @@ class UnaryOpNode(BaseNode):
 
 class VarNode(BaseNode):
     var_id_tok: Token
-    value_node: Optional[BaseNode]
+    value_node: Optional[ExprNode]
     var_type: VarType
     is_define: bool
 
@@ -109,7 +158,8 @@ class VarNode(BaseNode):
         self.is_define = is_define
 
         super(VarNode, self).__init__(
-            var_id_tok.pos_start, value_node.pos_end if value_node else None
+            var_id_tok.pos_start,
+            value_node.pos_end if value_node else var_id_tok.pos_end,
         )
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
@@ -150,7 +200,7 @@ class StatementsNode(BaseNode):
         return (
             (indent * ind_c)
             + "Statements[\n"
-            + (",\n").join(
+            + ",\n".join(
                 statement.pretty_repr(ind_c + 1, indent)
                 for statement in self.statements
             )
@@ -160,11 +210,11 @@ class StatementsNode(BaseNode):
         )
 
 
-class CallNode(BaseNode):
-    callable_node: BaseNode
-    args: List[BaseNode]
+class CallNode(ExprNode):
+    callable_node: "VarAccessNode"
+    args: List[ExprNode]
 
-    def __init__(self, callable_node: BaseNode, args: List[BaseNode]):
+    def __init__(self, callable_node: "VarAccessNode", args: List[ExprNode]):
         self.callable_node = callable_node
         self.args = args
 
@@ -198,31 +248,7 @@ class CallNode(BaseNode):
         )
 
 
-class CharNode(BaseNode):
-    token: Token
-
-    def __init__(self, token: Token):
-        self.token = token
-
-        super(CharNode, self).__init__(token.pos_start, token.pos_end)
-
-    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
-        return (indent * ind_c) + f"Char[{self.token}]"
-
-
-class StrNode(BaseNode):
-    token: Token
-
-    def __init__(self, token: Token):
-        self.token = token
-
-        super(StrNode, self).__init__(token.pos_start, token.pos_end)
-
-    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
-        return (indent * ind_c) + f"Char[{self.token}]"
-
-
-class VarAccessNode(BaseNode):
+class VarAccessNode(ExprNode):
     token: Token
 
     def __init__(self, token: Token):
@@ -279,23 +305,11 @@ class CommentNode(BaseNode):
         )
 
 
-class BoolNode(BaseNode):
-    token: Token
-
-    def __init__(self, token: Token):
-        self.token = token
-
-        super(BoolNode, self).__init__(token.pos_start, token.pos_end)
-
-    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
-        return (indent * ind_c) + f"Bool[{self.token.ctx}]"
-
-
-class FuncDefNode(BaseNode):
+class FuncNode(BaseNode):
     func_id_token: Token
     arg_id_tokens: List[Token]
-    arg_type_tokens: List[Token]
-    ret_type_token: Token
+    arg_types: List[VarType]
+    ret_type: VarType
     body: BaseNode
     auto_ret: bool
 
@@ -303,19 +317,19 @@ class FuncDefNode(BaseNode):
         self,
         func_id_token: Token,
         arg_id_tokens: List[Token],
-        arg_type_tokens: List[Token],
-        ret_type_token: Token,
+        arg_types: List[VarType],
+        ret_type: VarType,
         body: BaseNode,
         auto_ret: bool = False,
     ):
         self.func_id_token = func_id_token
         self.arg_id_tokens = arg_id_tokens
-        self.arg_type_tokens = arg_type_tokens
-        self.ret_type_token = ret_type_token
+        self.arg_types = arg_types
+        self.ret_type = ret_type
         self.body = body
         self.auto_ret = auto_ret
 
-        super(FuncDefNode, self).__init__(func_id_token.pos_start, body.pos_end)
+        super(FuncNode, self).__init__(func_id_token.pos_start, body.pos_end)
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (
@@ -340,7 +354,7 @@ class FuncDefNode(BaseNode):
                     f"{indent}arg_types: ["
                     + (f"\n{indent * 2}" + (indent * ind_c))
                     + (f",\n{indent * 2}" + (indent * ind_c)).join(
-                        [str(token) for token in self.arg_type_tokens]
+                        [str(token) for token in self.arg_types]
                     )
                     + "\n"
                     + (indent * ind_c)
@@ -350,7 +364,7 @@ class FuncDefNode(BaseNode):
                 if self.arg_id_tokens
                 else ""
             )
-            + f"{indent}ret_type: {self.ret_type_token}\n"
+            + f"{indent}ret_type: {self.ret_type}\n"
             + (indent * ind_c)
             + (
                 f"{indent}body: [\n"
@@ -368,11 +382,11 @@ class FuncDefNode(BaseNode):
         )
 
 
-class ReturnNode(BaseNode):
-    ret_node: Optional[BaseNode]
+class ReturnNode(ExprNode):
+    ret_node: Optional[ExprNode]
 
     def __init__(
-        self, ret_node: Optional[BaseNode], pos_start: Position, pos_end: Position
+        self, ret_node: Optional[ExprNode], pos_start: Position, pos_end: Position
     ):
         self.ret_node = ret_node
 
@@ -393,7 +407,7 @@ class ReturnNode(BaseNode):
         )
 
 
-class BreakNode(BaseNode):
+class BreakNode(ExprNode):
     def __init__(self, pos_start: Position, pos_end: Position):
         super(BreakNode, self).__init__(pos_start, pos_end)
 
@@ -401,7 +415,7 @@ class BreakNode(BaseNode):
         return (indent * ind_c) + "Break"
 
 
-class ContinueNode(BaseNode):
+class ContinueNode(ExprNode):
     def __init__(self, pos_start: Position, pos_end: Position):
         super(ContinueNode, self).__init__(pos_start, pos_end)
 
@@ -409,7 +423,7 @@ class ContinueNode(BaseNode):
         return (indent * ind_c) + "Continue"
 
 
-class WhileNode(BaseNode):
+class WhileNode(ExprNode):
     condition: BaseNode
     body: Optional[BaseNode]
 
@@ -446,7 +460,7 @@ class WhileNode(BaseNode):
         )
 
 
-class ForNode(BaseNode):
+class ForNode(ExprNode):
     var_node: BaseNode
     iter_expr: BaseNode
     body: BaseNode
@@ -485,7 +499,7 @@ class ForNode(BaseNode):
         )
 
 
-class IfNode(BaseNode):
+class IfNode(ExprNode):
     cases: List[Tuple[BaseNode, Optional[BaseNode]]]  # (condition, expr|statements)
     else_case: Optional[BaseNode]
 

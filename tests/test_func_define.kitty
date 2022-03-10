@@ -13,12 +13,12 @@ func b(a: int) -> int {
     ret 2 + 2
 }
 
-func c(a: int, b: char, c: bool) -> Generic {
-    func wrapper() -> int -> 5 + a
+func c(a: int, b: int, c: int) -> int {
+    func wrapper(a: int, b: int) -> int -> a * b
 
-    ret wrapper
+    ret wrapper(a, c)
 }
 
 func d() -> str -> 1 + 1
 
-func e(a: int, b: float) -> Generic -> (1 < 1)
+func e(a: int, b: float) -> bool -> (a < b)

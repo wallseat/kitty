@@ -6,8 +6,8 @@ var c: str = "str"
 
 var d: bool = true
 
-var e: Generic = a
+var e: int = a
 
 var f = (5 + 2 / 5)
 
-var g: wow_type
+var g: int

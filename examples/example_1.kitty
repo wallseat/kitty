@@ -36,7 +36,7 @@ func int_adder(a: int, b: int) -> int { # function
 func bool_and_bool_inline(bool_a: bool, bool_b: bool) -> bool -> bool_a and bool_b # inline-like function
 
 func if_expressions() -> noret {
-    if ((a + 5) < 4) -> (b) | (a + 6 > 9) -> (c or d) else (d)
+    if ((a + 5) < 4) -> (b) elif (a + 6 > 9) -> (c or d) else -> (d)
 
     if (a + b) > 1 {
         print(a)
@@ -48,7 +48,7 @@ func if_expressions() -> noret {
 }
 
 func for_while_expression() -> noret {
-    for (var i in [1, 4, 6, 8]) -> print(i) # inline-like for statement
+    for (var i: int in [1, 4, 6, 8]) -> print(i) # inline-like for statement
     while (i < 5) {
         print(i)
     }

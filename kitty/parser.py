@@ -11,10 +11,10 @@ from kitty.ast import (
     CommentNode,
     ContinueNode,
     ForNode,
-    FuncDefNode,
+    FuncNode,
     IfNode,
     ListNode,
-    NumNode,
+    NumericNode,
     ReturnNode,
     StatementsNode,
     StrNode,
@@ -23,9 +23,8 @@ from kitty.ast import (
     VarNode,
     WhileNode,
 )
-from kitty.errors import Error, InvalidSyntaxError, NotImplementedError
-from kitty.symbol_table import SymTable
-from kitty.token import Token, TokenType, VarType
+from kitty.errors import Error, InvalidSyntaxError
+from kitty.token import Token, TokenType, VarType, identifier_to_var_type
 
 
 class ParseResult:
@@ -36,7 +35,6 @@ class ParseResult:
     error: Optional[Error]
 
     def __init__(self):
-        self.ast = None
         self.error = None
         self.node = None
 
@@ -56,13 +54,6 @@ class ParseResult:
 
         return result.node
 
-    def try_register_result(self, result: "ParseResult") -> Optional[BaseNode]:
-        if result.error:
-            self.last_registered_advancements = result.advancements
-            return None
-
-        return self.register_result(result)
-
     def register_success(self, node: BaseNode) -> "ParseResult":
         self.node = node
         return self
@@ -76,7 +67,6 @@ class ParseResult:
 
 class Parser:
     tokens: List[Token]
-    symbol_table_stack: List[SymTable]
     cur_tok: Token
     idx: int
 
@@ -84,8 +74,6 @@ class Parser:
         self.tokens = tokens
         self.cur_tok = None  # type: ignore
         self.idx = -1
-
-        self.symbol_table_stack = [SymTable()]
 
         self.advance()
 
@@ -268,18 +256,7 @@ class Parser:
             self.advance(res)
 
             if self.cur_tok.type == TokenType.IDENTIFIER:
-                if self.cur_tok.ctx == "int":
-                    var_type = VarType.INT
-                elif self.cur_tok.ctx == "float":
-                    var_type = VarType.FLOAT
-                elif self.cur_tok.ctx == "str":
-                    var_type = VarType.STR
-                elif self.cur_tok.ctx == "char":
-                    var_type = VarType.CHAR
-                elif self.cur_tok.ctx == "bool":
-                    var_type = VarType.BOOL
-                else:
-                    var_type = VarType.GENERIC
+                var_type = identifier_to_var_type(self.cur_tok)
 
                 self.advance(res)
 
@@ -401,6 +378,15 @@ class Parser:
             return res
 
         if self.cur_tok.type == TokenType.L_BRC:
+            if not isinstance(atom, VarAccessNode):
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        atom.pos_start,
+                        atom.pos_end,
+                        details="Attempt to call non-identifier",
+                    )
+                )
+
             self.advance(res)
             args = []
 
@@ -452,7 +438,7 @@ class Parser:
 
             logging.debug(f"Parsed numeric")
 
-            return res.register_success(NumNode(tok))
+            return res.register_success(NumericNode(tok))
 
         elif tok.type == TokenType.STR:
             self.advance(res)
@@ -473,7 +459,7 @@ class Parser:
 
             logging.debug(f"Parsed bool")
 
-            return res.register_success(VarAccessNode(tok))
+            return res.register_success(BoolNode(tok))
 
         elif tok.type == TokenType.IDENTIFIER:
             node = res.register_result(self.parse_var_access())
@@ -568,7 +554,7 @@ class Parser:
     ) -> ParseResult:
         logging.debug("Parse bin op")
 
-        if right_operand == None:
+        if right_operand is None:
             right_operand = left_operand
 
         res = ParseResult()
@@ -820,7 +806,7 @@ class Parser:
 
         self.advance(res)
 
-        return (condition, statements)
+        return condition, statements
 
     def parse_if_expr_c(self) -> ParseResult:
         res = ParseResult()
@@ -983,7 +969,6 @@ class Parser:
 
             self.advance(res)
 
-        body = None
         if self.cur_tok.type == TokenType.R_ARROW:
             self.advance(res)
 
@@ -1096,7 +1081,6 @@ class Parser:
 
         self.advance(res)
 
-        func_id_token = None
         if self.cur_tok.type == TokenType.IDENTIFIER:
             func_id_token = self.cur_tok
             self.advance(res)
@@ -1120,7 +1104,7 @@ class Parser:
         self.advance(res)
 
         arg_id_tokens = []
-        arg_type_tokens = []
+        arg_types = []
         if self.cur_tok.type == TokenType.IDENTIFIER:  # Read arguments and their types
             arg_id_tokens.append(self.cur_tok)
 
@@ -1146,7 +1130,7 @@ class Parser:
                     )
                 )
 
-            arg_type_tokens.append(self.cur_tok)
+            arg_types.append(identifier_to_var_type(self.cur_tok))
 
             self.advance(res)
 
@@ -1186,7 +1170,7 @@ class Parser:
                         )
                     )
 
-                arg_type_tokens.append(self.cur_tok)
+                arg_types.append(identifier_to_var_type(self.cur_tok))
 
                 self.advance(res)
 
@@ -1210,8 +1194,6 @@ class Parser:
 
         self.advance()
 
-        ret_type_token = None
-
         if self.cur_tok.type != TokenType.R_ARROW:
             return res.register_failure(
                 InvalidSyntaxError(
@@ -1224,7 +1206,7 @@ class Parser:
         self.advance(res)
 
         if self.cur_tok.type == TokenType.IDENTIFIER:
-            ret_type_token = self.cur_tok
+            ret_type = identifier_to_var_type(self.cur_tok, can_untyped=True)
 
         else:
             return res.register_failure(
@@ -1237,7 +1219,6 @@ class Parser:
 
         self.advance(res)
 
-        body = None
         auto_ret = False
         if self.cur_tok.type == TokenType.R_ARROW:
             self.advance(res)
@@ -1282,11 +1263,11 @@ class Parser:
             )
 
         return res.register_success(
-            FuncDefNode(
+            FuncNode(
                 func_id_token,
                 arg_id_tokens,
-                arg_type_tokens,
-                ret_type_token,
+                arg_types,
+                ret_type,
                 body,
                 auto_ret=auto_ret,
             )

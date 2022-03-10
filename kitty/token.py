@@ -1,5 +1,5 @@
-from enum import Enum, auto
-from typing import Any, Optional
+from enum import Enum
+from typing import Any
 
 from kitty.position import Position
 
@@ -63,7 +63,7 @@ class TokenType(Enum):
     EOF = "EOF"  # end of file
 
 
-class VarType:
+class VarType(Enum):
     INT = "INT"
     FLOAT = "FLOAT"
     STR = "STR"
@@ -110,3 +110,20 @@ class Token:
                 return f"{self.type}:{self.ctx}"
 
         return f"{self.type}"
+
+
+def identifier_to_var_type(token: Token, can_untyped: bool = False) -> VarType:
+    if token.ctx == "int":
+        return VarType.INT
+    elif token.ctx == "float":
+        return VarType.FLOAT
+    elif token.ctx == "str":
+        return VarType.STR
+    elif token.ctx == "char":
+        return VarType.CHAR
+    elif token.ctx == "bool":
+        return VarType.BOOL
+    elif can_untyped and token.ctx in ('noret', 'untyped'):
+        return VarType.UNTYPED
+    else:
+        raise NotImplementedError("Generic types is unsupported yet!")
