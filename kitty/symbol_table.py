@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List, Tuple, Union, Any
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from kitty.token import VarType
 
@@ -10,31 +10,26 @@ class BaseSymbol:
 class VarSymbol(BaseSymbol):
     name: str
     type_: VarType
-    node: Any
 
-    def __init__(self, name: str, type_: VarType, node: Any):
+    def __init__(self, name: str, type_: VarType):
         self.name = name
         self.type_ = type_
-        self.node = node
 
 
 class FuncSymbol(BaseSymbol):
     name: str
     args: Optional[List[Tuple[str, VarType]]]
     ret_type: VarType
-    node: Any
 
     def __init__(
         self,
         name: str,
         args: Optional[List[Tuple[str, VarType]]],
         ret_type: VarType,
-        node: Any,
     ):
         self.name = name
         self.args = args
         self.ret_type = ret_type
-        self.node = node
 
 
 _T_Symbol = Union[VarSymbol, FuncSymbol]
@@ -48,10 +43,10 @@ class SymbolTable:
         self.outer_table = outer_table
         self.table = {}
 
-    def get(self, _id: str) -> Optional[_T_Symbol]:
+    def get(self, _id: str, recursive: bool = True) -> Optional[_T_Symbol]:
         if (sym := self.table.get(_id, None)) is not None:
             return sym
-        elif self.outer_table is not None:
+        elif self.outer_table is not None and recursive:
             return self.outer_table.get(_id)
         else:
             return None

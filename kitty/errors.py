@@ -50,13 +50,32 @@ class Error:
 
 class IllegalCharError(Error):
     def __init__(self, pos_start: Position, pos_end: Position, details: str):
-        super().__init__(pos_start, pos_end, "Illegal Character", details)
+        super(IllegalCharError, self).__init__(
+            pos_start, pos_end, "Illegal Character", details
+        )
 
 
 class InvalidSyntaxError(Error):
     def __init__(self, pos_start: Position, pos_end: Position, details: str = ""):
-        super().__init__(pos_start, pos_end, "Invalid Syntax", details)
+        super(InvalidSyntaxError, self).__init__(
+            pos_start, pos_end, "Invalid Syntax", details
+        )
 
 
-class NotImplementedError(Exception):
-    pass
+class ValidationError(Error):
+    def __init__(self, pos_start: Position, pos_end: Position, details: str = ""):
+        super(ValidationError, self).__init__(
+            pos_start, pos_end, "Validation Error", details
+        )
+
+
+class OperationError(Error):
+    def __init__(self, pos_start: Position, pos_end: Position, details: str = ""):
+        super(OperationError, self).__init__(
+            pos_start, pos_end, "Operation Error", details
+        )
+
+
+class IllegalOperation(OperationError):
+    def __init__(self, pos_start: Position, pos_end: Position):
+        super(IllegalOperation, self).__init__(pos_start, pos_end, "illegal operation")

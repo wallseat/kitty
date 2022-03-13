@@ -1,24 +1,23 @@
 func a() -> noret {
     var a: int = 1 + 1
-    print(a)
 
     ret
 }
 
-func a() -> int {
+func b() -> int {
     ret 1 + 1
 }
 
-func b(a: int) -> int {
+func c(a: int) -> int {
     ret 2 + 2
 }
 
-func c(a: int, b: int, c: int) -> int {
+func d(a: int, b: int, c: int) -> int {
     func wrapper(a: int, b: int) -> int -> a * b
 
     ret wrapper(a, c)
 }
 
-func d() -> str -> 1 + 1
+func e() -> str -> 1 + 1
 
-func e(a: int, b: float) -> bool -> (a < b)
+func f(a: int, b: float) -> bool -> (a < b)

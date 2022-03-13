@@ -4,6 +4,7 @@ from pprint import pprint
 
 from kitty.lexer import Lexer
 from kitty.parser import Parser
+from kitty.validator import Validator
 
 arg_parser = argparse.ArgumentParser()
 
@@ -17,12 +18,18 @@ group.add_argument(
 group.add_argument(
     "-p", "--parse", action="store_true", help="parse the input file and result AST"
 )
+group.add_argument(
+    "-p+v",
+    "--parse+validate",
+    action="store_true",
+    help="parse the input file, validate and solve expressions if possible and result AST",
+)
 
 group.add_argument(
     "-s",
     "--simulate",
     action="store_true",
-    help="run kitty interpretor with file as input",
+    help="run kitty interpreter with file as input",
 )
 
 arg_parser.add_argument(
@@ -34,8 +41,26 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
-    "file", type=str, help="run kitty interpretor with file as input"
+    "file", type=str, help="run kitty interpreter with file as input"
 )
+
+
+def lex(filename: str):
+    with open(filename, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    lexer = Lexer(args.file, text)
+    return lexer.tokenize()
+
+
+def parse(tokens):
+    parser = Parser(tokens)
+    return parser.parse()
+
+
+def validate(ast):
+    validator = Validator(ast)
+    return validator.validate()
 
 
 if __name__ == "__main__":
@@ -53,33 +78,50 @@ if __name__ == "__main__":
         print("Simulating not implemented yet!")
 
     elif args.lex:
-        with open(args.file, "r", encoding="utf-8") as f:
-            text = f.read()
 
-        lexer = Lexer(args.file, text)
-        tokens, error = lexer.tokenize()
-
-        if error:
-            print(error)
-        else:
-            pprint(tokens)
-
-    elif args.parse:
-        with open(args.file, "r", encoding="utf-8") as f:
-            text = f.read()
-
-        lexer = Lexer(args.file, text)
-        tokens, error = lexer.tokenize()
+        tokens, error = lex(args.file)
 
         if error:
             print(error)
             exit(-1)
 
-        parser = Parser(tokens)
-        res = parser.parse()
+        pprint(tokens)
+
+    elif args.parse:
+        tokens, error = lex(args.file)
+
+        if error:
+            print(error)
+            exit(-1)
+
+        res = parse(tokens)
+
         if res.error:
             print(res.error)
         elif res.node:
             print(res.node.pretty_repr(indent=" " * args.p_indent))
         else:
             print("Empty file!")
+            exit(0)
+
+    elif args.__dict__["parse+validate"]:
+        tokens, error = lex(args.file)
+
+        if error:
+            print(error)
+            exit(-1)
+
+        res = parse(tokens)
+
+        if res.error:
+            print(res.error)
+        elif not res.node:
+            print("Empty file!")
+            exit(0)
+
+        res = validate(res.node)
+
+        if res.error:
+            print(res.error)
+        else:
+            print(res.ast.pretty_repr(indent=" " * args.p_indent))

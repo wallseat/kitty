@@ -88,7 +88,7 @@ class Token:
         pos_end: Position = None,
         ctx: Any = None,
     ):
-        self.type = type_
+        self.type_ = type_
         self.ctx = ctx
 
         if pos_start:
@@ -103,13 +103,13 @@ class Token:
         if self.ctx:
             if isinstance(self.ctx, str):
                 if len(self.ctx) <= 15 and not "\n" in self.ctx:
-                    return f"{self.type}:'{self.ctx}'"
+                    return f"{self.type_}:'{self.ctx}'"
                 else:
-                    return f"{self.type}:[{len(self.ctx)} symbols]"
+                    return f"{self.type_}:[{len(self.ctx)} symbols]"
             else:
-                return f"{self.type}:{self.ctx}"
+                return f"{self.type_}:{self.ctx}"
 
-        return f"{self.type}"
+        return f"{self.type_}"
 
 
 def identifier_to_var_type(token: Token, can_untyped: bool = False) -> VarType:
@@ -123,7 +123,7 @@ def identifier_to_var_type(token: Token, can_untyped: bool = False) -> VarType:
         return VarType.CHAR
     elif token.ctx == "bool":
         return VarType.BOOL
-    elif can_untyped and token.ctx in ('noret', 'untyped'):
+    elif can_untyped and token.ctx in ("noret", "untyped"):
         return VarType.UNTYPED
     else:
         raise NotImplementedError("Generic types is unsupported yet!")

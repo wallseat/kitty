@@ -1,4 +1,5 @@
 import string
+from typing import List, Optional, Tuple
 
 from kitty.errors import IllegalCharError
 from kitty.position import Position
@@ -25,7 +26,7 @@ class Lexer:
             self.text[self.pos.idx] if self.pos.idx < len(self.text) else None
         )
 
-    def tokenize(self):
+    def tokenize(self) -> Tuple[Optional[List[Token]], Optional[IllegalCharError]]:
         tokens = []
 
         while self.cur_let is not None:

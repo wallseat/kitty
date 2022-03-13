@@ -1,20 +1,17 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from kitty.position import Position
-from kitty.token import Token, VarType
-
 from kitty.symbol_table import SymbolTable
+from kitty.token import Token, VarType
 
 
 class BaseNode:
-    pos_start: Optional[Position]
-    pos_end: Optional[Position]
+    pos_start: Position
+    pos_end: Position
 
     sym_table: Optional[SymbolTable]
 
-    def __init__(
-        self, pos_start: Optional[Position] = None, pos_end: Optional[Position] = None
-    ):
+    def __init__(self, pos_start: Position, pos_end: Position):
         self.pos_start = pos_start
         self.pos_end = pos_end
         self.sym_table = None
@@ -23,7 +20,35 @@ class BaseNode:
         return (indent * ind_c) + "[" + self.__class__.__name__ + "]"
 
 
-class ValueNode(BaseNode):
+class StatementsNode(BaseNode):
+    statements: List[BaseNode]
+
+    def __init__(
+        self, statements: List[BaseNode], pos_start: Position, pos_end: Position
+    ):
+        self.statements = statements
+
+        super(StatementsNode, self).__init__(pos_start, pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (
+            (indent * ind_c)
+            + "Statements[\n"
+            + ",\n".join(
+                statement.pretty_repr(ind_c + 1, indent)
+                for statement in self.statements
+            )
+            + "\n"
+            + (indent * ind_c)
+            + "]"
+        )
+
+
+class ExprNode(BaseNode):
+    type_: VarType
+
+
+class ValueNode(ExprNode):
     token: Token
 
 
@@ -75,17 +100,16 @@ class BoolNode(ValueNode):
         return (indent * ind_c) + f"Bool[{self.token.ctx}]"
 
 
-class ExprNode(BaseNode):
-    type: VarType
-
-
 class BinOpNode(ExprNode):
     op_token: Token
-    left_operand: BaseNode
-    right_operand: BaseNode
+    left_operand: Union[ExprNode, ValueNode]
+    right_operand: Union[ExprNode, ValueNode]
 
     def __init__(
-        self, left_operand: BaseNode, op_token: Token, right_operand: BaseNode
+        self,
+        left_operand: Union[ExprNode, ValueNode],
+        op_token: Token,
+        right_operand: Union[ExprNode, ValueNode],
     ):
         self.op_token = op_token
         self.left_operand = left_operand
@@ -116,9 +140,9 @@ class BinOpNode(ExprNode):
 
 class UnaryOpNode(ExprNode):
     op_token: Token
-    node: BaseNode
+    node: ExprNode
 
-    def __init__(self, op_token: Token, node: BaseNode):
+    def __init__(self, op_token: Token, node: ExprNode):
         self.op_token = op_token
         self.node = node
 
@@ -149,7 +173,7 @@ class VarNode(BaseNode):
         self,
         var_id_tok: Token,
         var_type: VarType,
-        value_node: Optional[BaseNode],
+        value_node: Optional[ExprNode],
         is_define: bool,
     ):
         self.var_id_tok = var_id_tok
@@ -181,30 +205,6 @@ class VarNode(BaseNode):
             )
             + (indent * ind_c)
             + f"{indent}is_define: {self.is_define}\n"
-            + (indent * ind_c)
-            + "]"
-        )
-
-
-class StatementsNode(BaseNode):
-    statements: List[BaseNode]
-
-    def __init__(
-        self, statements: List[BaseNode], pos_start: Position, pos_end: Position
-    ):
-        self.statements = statements
-
-        super(StatementsNode, self).__init__(pos_start, pos_end)
-
-    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
-        return (
-            (indent * ind_c)
-            + "Statements[\n"
-            + ",\n".join(
-                statement.pretty_repr(ind_c + 1, indent)
-                for statement in self.statements
-            )
-            + "\n"
             + (indent * ind_c)
             + "]"
         )
@@ -260,11 +260,11 @@ class VarAccessNode(ExprNode):
         return (indent * ind_c) + f"Access[{self.token}]"
 
 
-class ListNode(BaseNode):
-    elements: List[BaseNode]
+class ListNode(ExprNode):
+    elements: List[ExprNode]
 
     def __init__(
-        self, elements: List[BaseNode], pos_start: Position, pos_end: Position
+        self, elements: List[ExprNode], pos_start: Position, pos_end: Position
     ):
         self.elements = elements
 
