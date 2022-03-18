@@ -1,35 +1,40 @@
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
+from kitty.ast import BaseNode, FuncNode, VarNode
 from kitty.token import VarType
 
 
 class BaseSymbol:
-    pass
+    name: str
+    ref_node: BaseNode
 
 
 class VarSymbol(BaseSymbol):
-    name: str
     type_: VarType
+    ref_node: VarNode
 
-    def __init__(self, name: str, type_: VarType):
+    def __init__(self, name: str, type_: VarType, ref_node: VarNode):
         self.name = name
         self.type_ = type_
+        self.ref_node = ref_node
 
 
 class FuncSymbol(BaseSymbol):
-    name: str
     args: Optional[List[Tuple[str, VarType]]]
     ret_type: VarType
+    ref_node: FuncNode
 
     def __init__(
         self,
         name: str,
         args: Optional[List[Tuple[str, VarType]]],
         ret_type: VarType,
+        ref_node: FuncNode,
     ):
         self.name = name
         self.args = args
         self.ret_type = ret_type
+        self.ref_node = ref_node
 
 
 _T_Symbol = Union[VarSymbol, FuncSymbol]

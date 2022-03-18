@@ -1,20 +1,16 @@
 from typing import List, Optional, Tuple, Union
 
 from kitty.position import Position
-from kitty.symbol_table import SymbolTable
-from kitty.token import Token, VarType
+from kitty.token import Token, TokenType, VarType
 
 
 class BaseNode:
     pos_start: Position
     pos_end: Position
 
-    sym_table: Optional[SymbolTable]
-
     def __init__(self, pos_start: Position, pos_end: Position):
         self.pos_start = pos_start
         self.pos_end = pos_end
-        self.sym_table = None
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (indent * ind_c) + "[" + self.__class__.__name__ + "]"
@@ -57,6 +53,7 @@ class NumericNode(ValueNode):
 
     def __init__(self, token: Token):
         self.token = token
+        self.type_ = VarType.INT if token.type_ == TokenType.NUM_INT else VarType.FLOAT
 
         super(NumericNode, self).__init__(token.pos_start, token.pos_end)
 
@@ -66,6 +63,7 @@ class NumericNode(ValueNode):
 
 class CharNode(ValueNode):
     token: Token
+    type_ = VarType.CHAR
 
     def __init__(self, token: Token):
         self.token = token
@@ -78,6 +76,7 @@ class CharNode(ValueNode):
 
 class StrNode(ValueNode):
     token: Token
+    type_ = VarType.STR
 
     def __init__(self, token: Token):
         self.token = token
@@ -90,6 +89,7 @@ class StrNode(ValueNode):
 
 class BoolNode(ValueNode):
     token: Token
+    type_ = VarType.BOOL
 
     def __init__(self, token: Token):
         self.token = token

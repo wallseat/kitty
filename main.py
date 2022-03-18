@@ -124,4 +124,4 @@ if __name__ == "__main__":
         if res.error:
             print(res.error)
         else:
-            print(res.ast.pretty_repr(indent=" " * args.p_indent))
+            print(res.ctx_block.node.pretty_repr(indent=" " * args.p_indent))
