@@ -500,3 +500,24 @@ class NodeValueConverter:
         node.type_ = value.type_
 
         return node
+
+
+def create_default(type_: VarType) -> ValueNode:
+    if type_ in (VarType.FLOAT, VarType.INT):
+        return NumericNode(
+            Token(
+                TokenType.NUM_INT if type_ == VarType.INT else TokenType.NUM_FLOAT,
+                None,  # type: ignore
+                None,  # type: ignore
+                0,
+            ),
+            type_,
+        )
+    elif type_ == VarType.STR:
+        return StrNode(Token(TokenType.STR, None, None, ""))  # type: ignore
+    elif type_ == VarType.CHAR:
+        return CharNode(Token(TokenType.CHAR, None, None, ""))  # type: ignore
+    elif type_ == VarType.BOOL:
+        return BoolNode(Token(TokenType.BOOL, None, None, False))  # type: ignore
+    else:
+        raise Exception("Invalid type")

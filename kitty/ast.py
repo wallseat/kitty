@@ -58,8 +58,14 @@ class ValueNode(ExprNode):
 class NumericNode(ValueNode):
     token: Token
 
-    def __init__(self, token: Token):
-        self.type_ = VarType.INT if token.type_ == TokenType.NUM_INT else VarType.FLOAT
+    def __init__(self, token: Token, type_: Optional[VarType] = None):
+        self.type_ = (
+            type_
+            if type_ is not None
+            else VarType.INT
+            if token.type_ == TokenType.NUM_INT
+            else VarType.FLOAT
+        )
         super(NumericNode, self).__init__(token)
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:

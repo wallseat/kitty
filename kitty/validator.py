@@ -21,7 +21,7 @@ from kitty.ast import (
     WhileNode,
 )
 from kitty.errors import Error, ValidationError
-from kitty.solver import NodeValueConverter
+from kitty.solver import NodeValueConverter, create_default
 from kitty.symbol_table import FuncSymbol, SymbolTable, VarSymbol
 from kitty.token import TokenType, VarType
 
@@ -316,6 +316,9 @@ class Validator:
                 )
 
             ast.value_node = ctx_block.node  # type: ignore
+
+        else:
+            ast.value_node = create_default(ast.type_)
 
         parent_sym_table.set(
             ast.var_id_tok.ctx,
@@ -758,22 +761,6 @@ class Validator:
         parent_validation_ctx: ValidationContext,
         parent_sym_table: SymbolTable,
     ) -> ValidationResult:
-        """
-        TODO:
-        нужно как-то проверять в каком контексте мы находимся.
-
-        Если это контекст функции и производятся операции с ее аргументами,
-        то значения для них еще не объявлены и мы проводим валидацию типов,
-        если же это контекст присваивания в переменную,
-        то мы не должны оставлять переменную без конкретного значения.
-
-        Пример:
-
-        var a: int
-
-        var b = 5 * a # Ошибка. Значение для 'a' не объявлено.
-        """
-
         cur_ctx_block = ContextBlock(parent_sym_table)
         res = ValidationResult(cur_ctx_block)
 
@@ -799,6 +786,7 @@ class Validator:
             value_node = sym.ref_node.value_node.copy()  # type: ignore
             value_node.pos_start, value_node.pos_end = ast.pos_start, ast.pos_end
             ast = value_node  # type: ignore
+
         else:
             ast.type_ = sym.type_  # type: ignore
 

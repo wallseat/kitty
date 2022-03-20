@@ -90,6 +90,8 @@ class Token:
     ):
         self.type_ = type_
         self.ctx = ctx
+        self.pos_start = None  # type: ignore
+        self.pos_end = None  # type: ignore
 
         if pos_start:
             self.pos_start = pos_start.copy()
@@ -100,7 +102,7 @@ class Token:
             self.pos_end = pos_end.copy()
 
     def __repr__(self):
-        if self.ctx:
+        if self.ctx is not None:
             if isinstance(self.ctx, str):
                 if len(self.ctx) <= 15 and not "\n" in self.ctx:
                     return f"{self.type_}:'{self.ctx}'"
