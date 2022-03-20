@@ -135,7 +135,6 @@ class Validator:
         parent_validation_ctx: ValidationContext,
         parent_sym_table: SymbolTable,
     ) -> ValidationResult:
-
         cur_ctx_block = ContextBlock(parent_sym_table)
         res = ValidationResult(cur_ctx_block)
 
@@ -190,7 +189,6 @@ class Validator:
         parent_validation_ctx: ValidationContext,
         parent_sym_table: SymbolTable,
     ) -> ValidationResult:
-
         cur_ctx_block = ContextBlock(parent_sym_table)
         res = ValidationResult(cur_ctx_block)
 
@@ -270,7 +268,6 @@ class Validator:
         parent_validation_ctx: ValidationContext,
         parent_sym_table: SymbolTable,
     ) -> ValidationResult:
-
         cur_ctx_block = ContextBlock(parent_sym_table)
         res = ValidationResult(cur_ctx_block)
 
@@ -295,7 +292,9 @@ class Validator:
             )
 
         if ast.value_node is not None:
-            cur_ctx = ValidationContext(parent_validation_ctx, expr_type=ast.type_)
+            cur_ctx = ValidationContext(
+                parent_validation_ctx, can_return=False, expr_type=ast.type_
+            )
 
             ctx_block = res.register_result(
                 self.validate_expr(ast.value_node, cur_ctx, cur_ctx_block.sym_table)
@@ -354,7 +353,9 @@ class Validator:
                 )
             )
 
-        cur_ctx = ValidationContext(parent_validation_ctx, expr_type=ast.type_)
+        cur_ctx = ValidationContext(
+            parent_validation_ctx, can_return=False, expr_type=ast.type_
+        )
 
         ctx_block = res.register_result(
             self.validate_expr(ast.value_node, cur_ctx, cur_ctx_block.sym_table)  # type: ignore
@@ -471,57 +472,24 @@ class Validator:
             ast = ctx_block.node  # type: ignore
 
         elif isinstance(ast, CallNode):
-            identifier_name = ast.callable_node.token.ctx
+            ctx_block = res.register_result(
+                self.validate_call_expr(ast, parent_validation_ctx, parent_sym_table)
+            )
 
-            if not (func_sym := parent_sym_table.get(identifier_name)):
-                return res.register_failure(
-                    ValidationError(
-                        ast.pos_start,
-                        ast.pos_end,
-                        details=f"name '{identifier_name}' is not defined",
-                    )
-                )
+            if res.error or not ctx_block or ctx_block.node is None:
+                return res
 
-            if not isinstance(func_sym, FuncSymbol):
-                return res.register_failure(
-                    ValidationError(
-                        ast.pos_start,
-                        ast.pos_end,
-                        details=f"'{func_sym.type_}' is not callable",
-                    )
-                )
-
-            if func_sym.args:
-                for idx, (func_arg, call_param) in enumerate(
-                    zip(func_sym.args, ast.args)
-                ):
-                    cur_ctx = ValidationContext(
-                        parent_validation_ctx, expr_type=func_arg.type_
-                    )
-
-                    ctx_block = res.register_result(
-                        self.validate_expr(call_param, cur_ctx, cur_ctx_block.sym_table)
-                    )
-
-                    if res.error or not ctx_block or ctx_block.node is None:
-                        return res
-
-                    if ctx_block.node.type_ != func_arg.type_:  # type: ignore
-                        return res.register_failure(
-                            ValidationError(
-                                call_param.pos_start,
-                                call_param.pos_end,
-                                details=f"Expected type '{func_arg.type_}', got type '{ctx_block.node.type_}'",  # type: ignore
-                            )
-                        )
-
-                    ast.args[idx] = ctx_block.node  # type: ignore
-
-            ast.type_ = func_sym.ret_type
+            ast = ctx_block.node  # type: ignore
 
         elif isinstance(ast, IfNode):
-            raise NotImplementedError
-            # TODO: if validation
+            ctx_block = res.register_result(
+                self.validate_if_expr(ast, parent_validation_ctx, parent_sym_table)
+            )
+
+            if res.error or not ctx_block or ctx_block.node is None:
+                return res
+
+            ast = ctx_block.node  # type: ignore
 
         elif isinstance(ast, ForNode):
             raise NotImplementedError
@@ -536,44 +504,16 @@ class Validator:
             # TODO: list validation
 
         elif isinstance(ast, VarAccessNode):
-            """
-            TODO:
-            нужно как-то проверять в каком контексте мы находимся.
-            Если это контекст функции и производятся операции с ее аргументами,
-            то значения для них еще не объявлены и мы проводим валидацию типов,
-            если же это контекст присваивания в переменную,
-            то мы не должны оставлять переменную без конкретного значения.
-            Пример:
-
-            var a: int
-            var b = 5 * a # Ошибка. Значение для a не объявлено.
-
-            """
-
-            if not (sym := parent_sym_table.get(ast.token.ctx)):
-                return res.register_failure(
-                    ValidationError(
-                        ast.pos_start,
-                        ast.pos_end,
-                        details=f"name {ast.token.ctx} does not exist",
-                    )
+            ctx_block = res.register_result(
+                self.validate_var_access_expr(
+                    ast, parent_validation_ctx, parent_sym_table
                 )
+            )
 
-            if not isinstance(sym, VarSymbol):
-                return res.register_failure(
-                    ValidationError(
-                        ast.pos_start,
-                        ast.pos_end,
-                        details=f"name {ast.token.ctx} is not a variable",
-                    )
-                )
+            if res.error or not ctx_block or ctx_block.node is None:
+                return res
 
-            if isinstance(sym.ref_node.value_node, ValueNode):
-                value_node = sym.ref_node.value_node.copy()  # type: ignore
-                value_node.pos_start, value_node.pos_end = ast.pos_start, ast.pos_end
-                ast = value_node
-            else:
-                ast = sym.ref_node  # type: ignore
+            ast = ctx_block.node  # type: ignore
 
         return res.register_success(ast)
 
@@ -583,14 +523,15 @@ class Validator:
         parent_validation_ctx: ValidationContext,
         parent_sym_table: SymbolTable,
     ) -> ValidationResult:
-
         cur_contex_block = ContextBlock(parent_sym_table)
         res = ValidationResult(cur_contex_block)
 
         if isinstance(ast.left_operand, ExprNode):
             ctx_block = res.register_result(
                 self.validate_expr(
-                    ast.left_operand, parent_validation_ctx, parent_sym_table
+                    ast.left_operand,
+                    ValidationContext(parent_validation_ctx, expr_type=None),
+                    parent_sym_table,
                 )
             )
 
@@ -605,7 +546,9 @@ class Validator:
         if isinstance(ast.right_operand, ExprNode):
             ctx_block = res.register_result(
                 self.validate_expr(
-                    ast.right_operand, parent_validation_ctx, parent_sym_table
+                    ast.right_operand,
+                    ValidationContext(parent_validation_ctx, expr_type=None),
+                    parent_sym_table,
                 )
             )
 
@@ -693,26 +636,236 @@ class Validator:
             return res.register_success(ast)
 
     def validate_if_expr(
-        self, ast: IfNode, parent_ctx: ValidationContext
+        self,
+        ast: IfNode,
+        parent_validation_ctx: ValidationContext,
+        parent_sym_table: SymbolTable,
     ) -> ValidationResult:
-        raise NotImplementedError
+        cur_ctx_block = ContextBlock(parent_sym_table)
+        res = ValidationResult(cur_ctx_block)
+
+        valide_cases = []
+        new_ast = None
+
+        for idx, case in enumerate(ast.cases):
+            condition_ctx_block = res.register_result(
+                self.validate_expr(
+                    case[0], ValidationContext(expr_type=VarType.BOOL), parent_sym_table  # type: ignore
+                )
+            )
+
+            if res.error or not condition_ctx_block or condition_ctx_block.node is None:
+                return res
+
+            condition_node = condition_ctx_block.node
+
+            body_node = None
+            if isinstance(case[1], StatementsNode):
+                if parent_validation_ctx.expr_type:
+                    return res.register_failure(
+                        ValidationError(
+                            case[1].pos_start,
+                            case[1].pos_end,
+                            details="only can be inline 'if' expr",
+                        )
+                    )
+
+                body_validation_res = self.validate_statements(
+                    case[1], parent_validation_ctx, parent_sym_table
+                )
+                body_ctx_block = body_validation_res.ctx_block
+
+                if (
+                    body_validation_res.error
+                    or not body_ctx_block
+                    or body_ctx_block.node is None
+                ):
+                    return body_validation_res
+
+                body_node = body_ctx_block.node
+
+            elif isinstance(case[1], ExprNode):
+
+                body_validation_res = self.validate_expr(
+                    case[1], parent_validation_ctx, parent_sym_table
+                )
+                body_ctx_block = body_validation_res.ctx_block
+
+                if (
+                    body_validation_res.error
+                    or not body_ctx_block
+                    or body_ctx_block.node is None
+                ):
+                    return res
+
+                body_node = body_ctx_block.node
+
+            if (
+                isinstance(condition_node, BoolNode)
+                and condition_node.token.ctx is True
+                and idx == 0
+            ):
+                new_ast = body_node
+                break
+
+            elif (
+                isinstance(condition_node, BoolNode)
+                and condition_node.token.ctx is False
+                or not body_node
+            ):
+                continue
+
+            valide_cases.append((condition_node, body_node))
+            res.register_result(body_validation_res)
+
+        if not valide_cases and not new_ast and ast.else_case:
+            new_ast = ast.else_case
+
+        if new_ast:
+            ast = new_ast  # type: ignore
+        else:
+            ast.cases = valide_cases  # type: ignore
+
+        return res.register_success(ast)
 
     def validate_for_expr(
-        self, ast: ForNode, parent_ctx: ValidationContext
+        self,
+        ast: ForNode,
+        parent_validation_ctx: ValidationContext,
+        parent_sym_table: SymbolTable,
     ) -> ValidationResult:
         raise NotImplementedError
 
     def validate_while_expr(
-        self, ast: WhileNode, parent_ctx: ValidationContext
+        self,
+        ast: WhileNode,
+        parent_validation_ctx: ValidationContext,
+        parent_sym_table: SymbolTable,
     ) -> ValidationResult:
         raise NotImplementedError
 
     def validate_list_expr(
-        self, ast: ListNode, parent_ctx: ValidationContext
+        self,
+        ast: ListNode,
+        parent_validation_ctx: ValidationContext,
+        parent_sym_table: SymbolTable,
     ) -> ValidationResult:
         raise NotImplementedError
 
-    def validate_var_access(
-        self, ast: VarAccessNode, parent_ctx: ValidationContext
+    def validate_var_access_expr(
+        self,
+        ast: VarAccessNode,
+        parent_validation_ctx: ValidationContext,
+        parent_sym_table: SymbolTable,
     ) -> ValidationResult:
-        raise NotImplementedError
+        """
+        TODO:
+        нужно как-то проверять в каком контексте мы находимся.
+
+        Если это контекст функции и производятся операции с ее аргументами,
+        то значения для них еще не объявлены и мы проводим валидацию типов,
+        если же это контекст присваивания в переменную,
+        то мы не должны оставлять переменную без конкретного значения.
+
+        Пример:
+
+        var a: int
+
+        var b = 5 * a # Ошибка. Значение для 'a' не объявлено.
+        """
+
+        cur_ctx_block = ContextBlock(parent_sym_table)
+        res = ValidationResult(cur_ctx_block)
+
+        if not (sym := parent_sym_table.get(ast.token.ctx)):
+            return res.register_failure(
+                ValidationError(
+                    ast.pos_start,
+                    ast.pos_end,
+                    details=f"name {ast.token.ctx} does not exist",
+                )
+            )
+
+        if not isinstance(sym, VarSymbol):
+            return res.register_failure(
+                ValidationError(
+                    ast.pos_start,
+                    ast.pos_end,
+                    details=f"name {ast.token.ctx} is not a variable",
+                )
+            )
+
+        if isinstance(sym.ref_node.value_node, ValueNode):
+            value_node = sym.ref_node.value_node.copy()  # type: ignore
+            value_node.pos_start, value_node.pos_end = ast.pos_start, ast.pos_end
+            ast = value_node  # type: ignore
+        else:
+            ast.type_ = sym.type_  # type: ignore
+
+        return res.register_success(ast)
+
+    def validate_call_expr(
+        self,
+        ast: CallNode,
+        parent_validation_ctx: ValidationContext,
+        parent_sym_table: SymbolTable,
+    ) -> ValidationResult:
+        cur_ctx_block = ContextBlock(parent_sym_table)
+        res = ValidationResult(cur_ctx_block)
+
+        identifier_name = ast.callable_node.token.ctx
+
+        if not (func_sym := parent_sym_table.get(identifier_name)):
+            return res.register_failure(
+                ValidationError(
+                    ast.pos_start,
+                    ast.pos_end,
+                    details=f"name '{identifier_name}' is not defined",
+                )
+            )
+
+        if not isinstance(func_sym, FuncSymbol):
+            return res.register_failure(
+                ValidationError(
+                    ast.pos_start,
+                    ast.pos_end,
+                    details=f"'{func_sym.type_}' is not callable",
+                )
+            )
+
+        if func_sym.args:
+            if (func_argc := len(func_sym.args)) != (call_argc := len(ast.args)):
+                return res.register_failure(
+                    ValidationError(
+                        ast.pos_start,
+                        ast.pos_end,
+                        details=f"func '{identifier_name}' takes {func_argc} arguments but {call_argc} were given",
+                    )
+                )
+
+            for idx, (func_arg, call_param) in enumerate(zip(func_sym.args, ast.args)):
+                cur_ctx = ValidationContext(
+                    parent_validation_ctx, expr_type=func_arg.type_
+                )
+
+                ctx_block = res.register_result(
+                    self.validate_expr(call_param, cur_ctx, cur_ctx_block.sym_table)
+                )
+
+                if res.error or not ctx_block or ctx_block.node is None:
+                    return res
+
+                if ctx_block.node.type_ != func_arg.type_:  # type: ignore
+                    return res.register_failure(
+                        ValidationError(
+                            call_param.pos_start,
+                            call_param.pos_end,
+                            details=f"Expected type '{func_arg.type_}', got type '{ctx_block.node.type_}'",  # type: ignore
+                        )
+                    )
+
+                ast.args[idx] = ctx_block.node  # type: ignore
+
+        ast.type_ = func_sym.ret_type
+
+        return res.register_success(ast)

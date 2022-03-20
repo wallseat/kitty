@@ -1,3 +1,17 @@
+func hello(a: int) -> int {
+    ret 10 + a
+}
+
+func print(msg: str) -> str {
+    ret msg
+}
+
+var a = hello(5)
+var b = hello(6)
+var c = hello(7)
+var d = hello(8)
+
+
 if a > b -> hello(a) elif c > b -> hello(c) else -> hello(b)
 
 if a < b -> hello(a) elif c < b -> hello(c) elif d < c -> hello(d)
@@ -11,22 +25,4 @@ if (1 + 1 != 2) {
     print("Never printed too!")
 } else {
     print("Hello!")
-}
-
-if (False) {
-    no()
-} elif (False) {
-    no_again()
-} elif (True) {
-    yes()
-}
-
-if (False) {
-    no()
-} elif (False) {
-    no_again()
-} elif (True) {
-    yes()
-} else {
-    no_no_no()
 }

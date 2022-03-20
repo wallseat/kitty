@@ -374,6 +374,20 @@ class StringValue(Value):
     ):
         super(StringValue, self).__init__(pos_start, pos_end, value)
 
+    def op_add(self, other: "Value") -> _T_ValueOpRet:
+        if not isinstance(other, (StringValue, CharValue)):
+            return None, IllegalOperation(
+                self.pos_start,
+                other.pos_end,
+                f"'+' between '{self.type_}' and '{other.type_}'",
+            )
+
+        value = None
+        if self.value is not None and other.value is not None:
+            value = self.value + other.value
+
+        return StringValue(self.pos_start, other.pos_end, value), None
+
 
 class CharValue(StringValue):
     type_ = VarType.CHAR

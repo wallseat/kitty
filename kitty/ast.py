@@ -79,7 +79,7 @@ class StrNode(ValueNode):
     type_ = VarType.STR
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
-        return (indent * ind_c) + f"Char[{self.token}]"
+        return (indent * ind_c) + f"Str[{self.token}]"
 
 
 class BoolNode(ValueNode):

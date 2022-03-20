@@ -1,6 +1,6 @@
 var a: int = 123
 
-var b: char = 'a'
+var b: char = '1'
 
 var c: str = "str"
 
@@ -10,7 +10,7 @@ var e: int = a
 
 var f = (5 + 2 / 5) * e
 
-var g: int = -9
+var g: int = -9 * e
 
 var h: float
 
