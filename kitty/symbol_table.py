@@ -20,14 +20,14 @@ class VarSymbol(BaseSymbol):
 
 
 class FuncSymbol(BaseSymbol):
-    args: Optional[List[Tuple[str, VarType]]]
+    args: List[VarNode]
     ret_type: VarType
     ref_node: FuncNode
 
     def __init__(
         self,
         name: str,
-        args: Optional[List[Tuple[str, VarType]]],
+        args: List[VarNode],
         ret_type: VarType,
         ref_node: FuncNode,
     ):

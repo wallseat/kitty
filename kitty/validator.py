@@ -191,10 +191,6 @@ class Validator:
             parent_validation_ctx, can_return=True, return_type=ast.ret_type
         )
 
-        args = [
-            (name.ctx, type_) for (name, type_) in zip(ast.arg_id_tokens, ast.arg_types)
-        ]
-
         func_name = ast.func_id_token.ctx
 
         if parent_sym_table.get(func_name, recursive=False):
@@ -206,9 +202,9 @@ class Validator:
                 )
             )
 
-        for var in args:
-            cur_ctx_block.sym_table.set(var[0], VarSymbol(*var, ref_node=None))  # type: ignore
-            # TODO: подумать над возможной переработкой аргументов функции. Возможно стоит создавать VarNode без значений, и заполнять их при вызове
+        for arg in ast.args:
+            arg_name = arg.var_id_tok.ctx
+            cur_ctx_block.sym_table.set(arg_name, VarSymbol(arg_name, arg.type_, ref_node=arg))  # type: ignore
 
         if isinstance(ast.body, StatementsNode):
             ctx_block = res.register_result(
@@ -235,7 +231,13 @@ class Validator:
                     ValidationError(
                         ctx_block.node.pos_start,
                         ctx_block.node.pos_end,
-                        details="invalid expr type",
+                        details=(
+                            "invalid expr type, "
+                            "expected type "
+                            f"'{cur_validation_ctx.return_type.name}', "  # type: ignore
+                            "got "
+                            f"'{ctx_block.node.type_.name}'"  # type: ignore
+                        ),
                     )
                 )
 
@@ -248,7 +250,9 @@ class Validator:
 
         parent_sym_table.set(
             func_name,
-            FuncSymbol(name=func_name, args=args, ret_type=ast.ret_type, ref_node=ast),
+            FuncSymbol(
+                name=func_name, args=ast.args, ret_type=ast.ret_type, ref_node=ast
+            ),
         )
 
         return res.register_success(ast)
@@ -284,7 +288,7 @@ class Validator:
             )
 
         if ast.value_node is not None:
-            cur_ctx = ValidationContext(parent_validation_ctx, expr_type=ast.var_type)
+            cur_ctx = ValidationContext(parent_validation_ctx, expr_type=ast.type_)
 
             ctx_block = res.register_result(
                 self.validate_expr(ast.value_node, cur_ctx, cur_ctx_block.sym_table)
@@ -293,10 +297,10 @@ class Validator:
             if res.error or not ctx_block or ctx_block.node is None:
                 return res
 
-            if ast.var_type == VarType.UNTYPED:
-                ast.var_type = ctx_block.node.type_  # type: ignore
+            if ast.type_ == VarType.UNTYPED:
+                ast.type_ = ctx_block.node.type_  # type: ignore
 
-            elif ast.var_type != ctx_block.node.type_:  # type: ignore
+            elif ast.type_ != ctx_block.node.type_:  # type: ignore
                 return res.register_failure(
                     ValidationError(
                         ast.pos_start,
@@ -309,7 +313,7 @@ class Validator:
 
         parent_sym_table.set(
             ast.var_id_tok.ctx,
-            VarSymbol(name=var_name, type_=ast.var_type, ref_node=ast),
+            VarSymbol(name=var_name, type_=ast.type_, ref_node=ast),
         )
 
         return res.register_success(ast)
@@ -348,7 +352,13 @@ class Validator:
                         ValidationError(
                             ast.ret_node.pos_start,
                             ast.ret_node.pos_end,
-                            details="return type does not match declared type",
+                            details=(
+                                "return type does not match declared type, "
+                                "expected "
+                                f"'{parent_validation_ctx.return_type.name}' "  # type: ignore
+                                "got "
+                                f"'{ctx_block.node.type_.name}'"  # type: ignore
+                            ),
                         )
                     )
 
@@ -417,24 +427,26 @@ class Validator:
                 )
 
             if func_sym.args:
-                for idx, ((_, type_), node) in enumerate(zip(func_sym.args, ast.args)):
+                for idx, (func_arg, call_param) in enumerate(
+                    zip(func_sym.args, ast.args)
+                ):
                     cur_ctx = ValidationContext(
-                        parent_validation_ctx, return_type=type_
+                        parent_validation_ctx, expr_type=func_arg.type_
                     )
 
                     ctx_block = res.register_result(
-                        self.validate_expr(node, cur_ctx, cur_ctx_block.sym_table)
+                        self.validate_expr(call_param, cur_ctx, cur_ctx_block.sym_table)
                     )
 
                     if res.error or not ctx_block or ctx_block.node is None:
                         return res
 
-                    if ctx_block.node.type_ != type_:  # type: ignore
+                    if ctx_block.node.type_ != func_arg.type_:  # type: ignore
                         return res.register_failure(
                             ValidationError(
-                                node.pos_start,
-                                node.pos_end,
-                                details=f"Expected type '{type_}', got type '{ctx_block.node.type_}'",  # type: ignore
+                                call_param.pos_start,
+                                call_param.pos_end,
+                                details=f"Expected type '{func_arg.type_}', got type '{ctx_block.node.type_}'",  # type: ignore
                             )
                         )
 
@@ -459,6 +471,20 @@ class Validator:
             # TODO: list validation
 
         elif isinstance(ast, VarAccessNode):
+            """
+            TODO:
+            нужно как-то проверять в каком контексте мы находимся.
+            Если это контекст функции и производятся операции с ее аргументами,
+            то значения для них еще не объявлены и мы проводим валидацию типов,
+            если же это контекст присваивания в переменную,
+            то мы не должны оставлять переменную без конкретного значения.
+            Пример:
+
+            var a: int
+            var b = 5 * a # Ошибка. Значение для a не объявлено.
+
+            """
+
             if not (sym := parent_sym_table.get(ast.token.ctx)):
                 return res.register_failure(
                     ValidationError(
@@ -478,7 +504,9 @@ class Validator:
                 )
 
             if isinstance(sym.ref_node.value_node, ValueNode):
-                ast = sym.ref_node.value_node  # type: ignore
+                value_node = sym.ref_node.value_node.copy()  # type: ignore
+                value_node.pos_start, value_node.pos_end = ast.pos_start, ast.pos_end
+                ast = value_node
             else:
                 ast = sym.ref_node  # type: ignore
 

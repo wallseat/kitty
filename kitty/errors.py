@@ -77,5 +77,9 @@ class OperationError(Error):
 
 
 class IllegalOperation(OperationError):
-    def __init__(self, pos_start: Position, pos_end: Position):
-        super(IllegalOperation, self).__init__(pos_start, pos_end, "illegal operation")
+    def __init__(
+        self, pos_start: Position, pos_end: Position, additional_info: str = ""
+    ):
+        super(IllegalOperation, self).__init__(
+            pos_start, pos_end, "illegal operation " + additional_info
+        )

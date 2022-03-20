@@ -8,6 +8,10 @@ var d: bool = true
 
 var e: int = a
 
-var f = (5 + 2 / 5)
+var f = (5 + 2 / 5) * e
 
-var g: int
+var g: int = -9
+
+var h: float
+
+h = 5 # now it throws an error

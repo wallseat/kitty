@@ -47,15 +47,20 @@ class ExprNode(BaseNode):
 class ValueNode(ExprNode):
     token: Token
 
+    def __init__(self, token: Token):
+        self.token = token
+        super(ValueNode, self).__init__(token.pos_start, token.pos_end)
+
+    def copy(self) -> "ValueNode":
+        return self.__class__(self.token)
+
 
 class NumericNode(ValueNode):
     token: Token
 
     def __init__(self, token: Token):
-        self.token = token
         self.type_ = VarType.INT if token.type_ == TokenType.NUM_INT else VarType.FLOAT
-
-        super(NumericNode, self).__init__(token.pos_start, token.pos_end)
+        super(NumericNode, self).__init__(token)
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (indent * ind_c) + f"Numeric[{self.token}]"
@@ -65,11 +70,6 @@ class CharNode(ValueNode):
     token: Token
     type_ = VarType.CHAR
 
-    def __init__(self, token: Token):
-        self.token = token
-
-        super(CharNode, self).__init__(token.pos_start, token.pos_end)
-
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (indent * ind_c) + f"Char[{self.token}]"
 
@@ -78,11 +78,6 @@ class StrNode(ValueNode):
     token: Token
     type_ = VarType.STR
 
-    def __init__(self, token: Token):
-        self.token = token
-
-        super(StrNode, self).__init__(token.pos_start, token.pos_end)
-
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (indent * ind_c) + f"Char[{self.token}]"
 
@@ -90,11 +85,6 @@ class StrNode(ValueNode):
 class BoolNode(ValueNode):
     token: Token
     type_ = VarType.BOOL
-
-    def __init__(self, token: Token):
-        self.token = token
-
-        super(BoolNode, self).__init__(token.pos_start, token.pos_end)
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (indent * ind_c) + f"Bool[{self.token.ctx}]"
@@ -163,10 +153,9 @@ class UnaryOpNode(ExprNode):
         )
 
 
-class VarNode(BaseNode):
+class VarNode(ExprNode):
     var_id_tok: Token
     value_node: Optional[ExprNode]
-    var_type: VarType
     is_define: bool
 
     def __init__(
@@ -178,7 +167,7 @@ class VarNode(BaseNode):
     ):
         self.var_id_tok = var_id_tok
         self.value_node = value_node
-        self.var_type = var_type
+        self.type_ = var_type
         self.is_define = is_define
 
         super(VarNode, self).__init__(
@@ -193,7 +182,7 @@ class VarNode(BaseNode):
             + (indent * ind_c)
             + f"{indent}id: {self.var_id_tok},\n"
             + (indent * ind_c)
-            + f"{indent}type: {self.var_type},\n"
+            + f"{indent}type: {self.type_},\n"
             + (
                 (indent * ind_c)
                 + f"{indent}value: [\n"
@@ -307,8 +296,7 @@ class CommentNode(BaseNode):
 
 class FuncNode(BaseNode):
     func_id_token: Token
-    arg_id_tokens: List[Token]
-    arg_types: List[VarType]
+    args: List[VarNode]
     ret_type: VarType
     body: BaseNode
     auto_ret: bool
@@ -316,15 +304,13 @@ class FuncNode(BaseNode):
     def __init__(
         self,
         func_id_token: Token,
-        arg_id_tokens: List[Token],
-        arg_types: List[VarType],
+        args: List[VarNode],
         ret_type: VarType,
         body: BaseNode,
         auto_ret: bool = False,
     ):
         self.func_id_token = func_id_token
-        self.arg_id_tokens = arg_id_tokens
-        self.arg_types = arg_types
+        self.args = args
         self.ret_type = ret_type
         self.body = body
         self.auto_ret = auto_ret
@@ -340,28 +326,14 @@ class FuncNode(BaseNode):
             + (indent * ind_c)
             + (
                 (
-                    f"{indent}arg_ids: ["
-                    + (f"\n{indent * 2}" + (indent * ind_c))
-                    + (f",\n{indent * 2}" + (indent * ind_c)).join(
-                        [str(token) for token in self.arg_id_tokens]
-                    )
+                    f"{indent}args: [\n"
+                    + ",\n".join(arg.pretty_repr(ind_c + 2) for arg in self.args)
                     + "\n"
                     + (indent * ind_c)
                     + f"{indent}]\n"
                 )
                 + (indent * ind_c)
-                + (
-                    f"{indent}arg_types: ["
-                    + (f"\n{indent * 2}" + (indent * ind_c))
-                    + (f",\n{indent * 2}" + (indent * ind_c)).join(
-                        [str(token) for token in self.arg_types]
-                    )
-                    + "\n"
-                    + (indent * ind_c)
-                    + f"{indent}]\n"
-                )
-                + (indent * ind_c)
-                if self.arg_id_tokens
+                if self.args
                 else ""
             )
             + f"{indent}ret_type: {self.ret_type}\n"

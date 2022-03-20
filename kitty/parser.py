@@ -1103,10 +1103,9 @@ class Parser:
 
         self.advance(res)
 
-        arg_id_tokens = []
-        arg_types = []
+        args = []
         if self.cur_tok.type_ == TokenType.IDENTIFIER:  # Read arguments and their types
-            arg_id_tokens.append(self.cur_tok)
+            arg_id = self.cur_tok
 
             self.advance(res)
 
@@ -1130,7 +1129,9 @@ class Parser:
                     )
                 )
 
-            arg_types.append(identifier_to_var_type(self.cur_tok))
+            arg_type = identifier_to_var_type(self.cur_tok)
+
+            args.append(VarNode(arg_id, arg_type, None, True))
 
             self.advance(res)
 
@@ -1146,7 +1147,7 @@ class Parser:
                         )
                     )
 
-                arg_id_tokens.append(self.cur_tok)
+                arg_id = self.cur_tok
 
                 self.advance(res)
 
@@ -1170,7 +1171,9 @@ class Parser:
                         )
                     )
 
-                arg_types.append(identifier_to_var_type(self.cur_tok))
+                arg_type = identifier_to_var_type(self.cur_tok)
+
+                args.append(VarNode(arg_id, arg_type, None, True))
 
                 self.advance(res)
 
@@ -1265,8 +1268,7 @@ class Parser:
         return res.register_success(
             FuncNode(
                 func_id_token,
-                arg_id_tokens,
-                arg_types,
+                args,
                 ret_type,
                 body,
                 auto_ret=auto_ret,

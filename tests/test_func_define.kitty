@@ -13,11 +13,11 @@ func c(a: int) -> int {
 }
 
 func d(a: int, b: int, c: int) -> int {
-    func wrapper(a: int, b: int) -> int -> a * b
+    func wrapper(b: int) -> int -> a * b
 
     ret wrapper(a, c)
 }
 
-func e() -> str -> 1 + 1
+func e() -> str -> "lol kek"
 
 func f(a: int, b: float) -> bool -> (a < b)
