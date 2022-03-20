@@ -1,4 +1,4 @@
-from typing import List, Mapping, Optional
+from typing import Callable, List, Optional
 
 from kitty.ast import (
     BaseNode,
@@ -150,11 +150,18 @@ class Validator:
                 )
 
             elif isinstance(stmt, VarNode):
-                ctx_block = res.register_result(
-                    self.validate_var_def(
-                        stmt, parent_validation_ctx, cur_ctx_block.sym_table
+                if stmt.is_define:
+                    ctx_block = res.register_result(
+                        self.validate_var_def(
+                            stmt, parent_validation_ctx, cur_ctx_block.sym_table
+                        )
                     )
-                )
+                else:
+                    ctx_block = res.register_result(
+                        self.validate_var_assign(
+                            stmt, parent_validation_ctx, cur_ctx_block.sym_table
+                        )
+                    )
 
             elif isinstance(stmt, ExprNode):
                 ctx_block = res.register_result(
@@ -274,7 +281,7 @@ class Validator:
                 ValidationError(
                     ast.pos_start,
                     ast.pos_end,
-                    details="only can define a variable in this ValidationContext",
+                    details="only can define a variable in this context",
                 )
             )
 
@@ -315,6 +322,64 @@ class Validator:
             ast.var_id_tok.ctx,
             VarSymbol(name=var_name, type_=ast.type_, ref_node=ast),
         )
+
+        return res.register_success(ast)
+
+    def validate_var_assign(
+        self,
+        ast: VarNode,
+        parent_validation_ctx: ValidationContext,
+        parent_sym_table: SymbolTable,
+    ):
+        cur_ctx_block = ContextBlock(parent_sym_table)
+        res = ValidationResult(cur_ctx_block)
+
+        var_name: str = ast.var_id_tok.ctx
+
+        if not (sym := parent_sym_table.get(var_name)):
+            return res.register_failure(
+                ValidationError(
+                    ast.pos_start,
+                    ast.pos_end,
+                    details=f"name '{var_name}' is not defined",
+                )
+            )
+
+        if not isinstance(sym, VarSymbol):
+            return res.register_failure(
+                ValidationError(
+                    ast.pos_start,
+                    ast.pos_end,
+                    details=f"name '{var_name}' is not a variable",
+                )
+            )
+
+        cur_ctx = ValidationContext(parent_validation_ctx, expr_type=ast.type_)
+
+        ctx_block = res.register_result(
+            self.validate_expr(ast.value_node, cur_ctx, cur_ctx_block.sym_table)  # type: ignore
+        )
+
+        if res.error or not ctx_block or ctx_block.node is None:
+            return res
+
+        if sym.type_ != ctx_block.node.type_:  # type: ignore
+            return res.register_failure(
+                ValidationError(
+                    ast.pos_start,
+                    ast.pos_end,
+                    details=(
+                        "the declared type "
+                        f"'{sym.type_.name}' "
+                        "of the variable does not match the data type "
+                        f"'{ctx_block.node.type_.name}'"  # type: ignore
+                    ),
+                )
+            )
+
+        ast.value_node = ctx_block.node  # type: ignore
+
+        sym.ref_node = ast
 
         return res.register_success(ast)
 
@@ -557,50 +622,21 @@ class Validator:
 
         solved_value = err = None
 
-        if ast.op_token.type_ == TokenType.ADD:
-            solved_value, err = left_value.add(right_value)
+        method = getattr(left_value, "op_" + ast.op_token.type_.value, None)
+        if method is None:
+            raise Exception(f"Operation {ast.op_token.type_} is not supported!")
 
-        elif ast.op_token.type_ == TokenType.SUB:
-            solved_value, err = left_value.sub(right_value)
+        else:
+            solved_value, err = method(right_value)  # type: ignore
 
-        elif ast.op_token.type_ == TokenType.MUL:
-            solved_value, err = left_value.mul(right_value)
-
-        elif ast.op_token.type_ == TokenType.DIV:
-            solved_value, err = left_value.div(right_value)
-
-        elif ast.op_token.type_ == TokenType.EQ:
-            solved_value, err = left_value.eq(right_value)
-
-        elif ast.op_token.type_ == TokenType.NEQ:
-            solved_value, err = left_value.neq(right_value)
-
-        elif ast.op_token.type_ == TokenType.LT:
-            solved_value, err = left_value.lt(right_value)
-
-        elif ast.op_token.type_ == TokenType.LTE:
-            solved_value, err = left_value.lte(right_value)
-
-        elif ast.op_token.type_ == TokenType.GT:
-            solved_value, err = left_value.gt(right_value)
-
-        elif ast.op_token.type_ == TokenType.GTE:
-            solved_value, err = left_value.gte(right_value)
-
-        elif ast.op_token.type_ == TokenType.AND:
-            solved_value, err = left_value.and_(right_value)
-
-        elif ast.op_token.type_ == TokenType.OR:
-            solved_value, err = left_value.or_(right_value)
-
-        if err is not None:
-            return res.register_failure(err)
+            if err is not None:
+                return res.register_failure(err)
 
         if parent_validation_ctx.expr_type == VarType.BOOL:
             solved_value, err = solved_value.bool_()  # type: ignore
 
-        if err is not None:
-            return res.register_failure(err)
+            if err is not None:
+                return res.register_failure(err)
 
         if solved_value.value is not None:  # type: ignore
             return res.register_success(

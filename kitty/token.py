@@ -7,71 +7,71 @@ from kitty.position import Position
 class TokenType(Enum):
     NLINE = "NLINE"  # \n
 
-    ADD = "ADD"  # +
-    SUB = "SUB"  # -
-    MUL = "MUL"  # *
-    DIV = "DIV"  # /
-    ASSIGN = "ASSIGN"  # =
+    ADD = "add"  # +
+    SUB = "sub"  # -
+    MUL = "mul"  # *
+    DIV = "div"  # /
+    ASSIGN = "assign"  # =
 
-    EQ = "EQ"  # ==
-    NEQ = "NEQ"  # !=
-    GT = "GT"  # >
-    LT = "LT"  # <
-    GTE = "GTE"  # >=
-    LTE = "LTE"  # <=
+    EQ = "eq"  # ==
+    NEQ = "neq"  # !=
+    GT = "gt"  # >
+    LT = "lt"  # <
+    GTE = "gte"  # >=
+    LTE = "lte"  # <=
 
-    L_BRC = "L_BRC"  # (
-    R_BRC = "R_BRC"  # )
-    S_BLOCK = "S_BLOCK"  # {
-    E_BLOCK = "E_BLOCK"  # }
-    L_SQUARE = "L_SQUARE"  # [
-    R_SQUARE = "R_SQUARE"  # ]
+    L_BRC = "l_brc"  # (
+    R_BRC = "r_brc"  # )
+    S_BLOCK = "s_block"  # {
+    E_BLOCK = "e_block"  # }
+    L_SQUARE = "l_square"  # [
+    R_SQUARE = "r_square"  # ]
 
-    COMMA = "COMMA"  # ,
-    DOT = "DOT"  # .
-    COLON = "COLON"  # :
-    R_ARROW = "R_ARROW"  # ->
+    COMMA = "comma"  # ,
+    DOT = "dot"  # .
+    COLON = "colon"  # :
+    R_ARROW = "r_arrow"  # ->
 
-    IF = "IF"  # if
-    ELIF = "ELIF"  # elif
-    ELSE = "ELSE"  # else
-    WHILE = "WHILE"  # while
-    FOR = "FOR"  # for
-    RET = "RET"  # ret
-    VAR = "VAR"  # var
-    FUNC = "FUNC"  # func
-    AND = "AND"  # and
-    OR = "OR"  # or
-    NOT = "NOT"  # not
-    IN = "IN"  # in
-    CONTINUE = "CONTINUE"  # continue
-    BREAK = "BREAK"  # break
+    IF = "if"  # if
+    ELIF = "elif"  # elif
+    ELSE = "else"  # else
+    WHILE = "while"  # while
+    FOR = "for"  # for
+    RET = "ret"  # ret
+    VAR = "var"  # var
+    FUNC = "func"  # func
+    AND = "and"  # and
+    OR = "or"  # or
+    NOT = "not"  # not
+    IN = "in"  # in
+    CONTINUE = "continue"  # continue
+    BREAK = "break"  # break
 
-    IDENTIFIER = "IDENTIFIER"  # a | abc | ...
+    IDENTIFIER = "identifier"  # a | abc | ...
 
-    INLINE_COMMENT = "INLINE_COMMENT"  # #
-    COMMENT = "COMMENT"  # /* ctx */
+    INLINE_COMMENT = "inline_comment"  # #
+    COMMENT = "comment"  # /* ctx */
 
-    NUM_INT = "NUM_INT"  # 5
-    NUM_FLOAT = "NUM_FLOAT"  # 5.0 or 5f
+    NUM_INT = "num_int"  # 5
+    NUM_FLOAT = "num_float"  # 5.0 or 5f
 
-    STR = "STR"  # "string"
-    CHAR = "CHAR"  # 'a'
+    STR = "str"  # "string"
+    CHAR = "char"  # 'a'
 
-    BOOL = "BOOL"  # true | false
+    BOOL = "bool"  # true | false
 
-    EOF = "EOF"  # end of file
+    EOF = "eof"  # end of file
 
 
 class VarType(Enum):
-    INT = "INT"
-    FLOAT = "FLOAT"
-    STR = "STR"
-    CHAR = "CHAR"
-    BOOL = "BOOL"
+    INT = "int"
+    FLOAT = "float"
+    STR = "str"
+    CHAR = "char"
+    BOOL = "bool"
 
-    GENERIC = "GENERIC"
-    UNTYPED = "UNTYPED"
+    GENERIC = "generic"
+    UNTYPED = "untyped"
 
 
 class Token:

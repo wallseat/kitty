@@ -22,84 +22,84 @@ class Value:
         self.pos_start = pos_start
         self.pos_end = pos_end
 
-    def add(self, other: "Value") -> _T_ValueOpRet:
+    def op_add(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation '+' not implemented for type '{self.type_}'",
         )
 
-    def sub(self, other: "Value") -> _T_ValueOpRet:
+    def op_sub(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation '-' not implemented for type '{self.type_}'",
         )
 
-    def mul(self, other: "Value") -> _T_ValueOpRet:
+    def op_mul(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation '*' not implemented for type '{self.type_}'",
         )
 
-    def div(self, other: "Value") -> _T_ValueOpRet:
+    def op_div(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation '/' not implemented for type '{self.type_}'",
         )
 
-    def eq(self, other: "Value") -> _T_ValueOpRet:
+    def op_eq(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation '==' not implemented for type '{self.type_}'",
         )
 
-    def neq(self, other: "Value") -> _T_ValueOpRet:
+    def op_neq(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation '!=' not implemented for type '{self.type_}'",
         )
 
-    def lt(self, other: "Value") -> _T_ValueOpRet:
+    def op_lt(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation '<' not implemented for type '{self.type_}'",
         )
 
-    def lte(self, other: "Value") -> _T_ValueOpRet:
+    def op_lte(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation '<=' not implemented for type '{self.type_}'",
         )
 
-    def gt(self, other: "Value") -> _T_ValueOpRet:
+    def op_gt(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation '>' not implemented for type '{self.type_}'",
         )
 
-    def gte(self, other: "Value") -> _T_ValueOpRet:
+    def op_gte(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation '>=' not implemented for type '{self.type_}'",
         )
 
-    def and_(self, other: "Value") -> _T_ValueOpRet:
+    def op_and(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
             details=f"operation 'and' not implemented for type '{self.type_}'",
         )
 
-    def or_(self, other: "Value") -> _T_ValueOpRet:
+    def op_or(self, other: "Value") -> _T_ValueOpRet:
         return None, OperationError(
             self.pos_start,
             other.pos_end,
@@ -155,7 +155,7 @@ class NumericValue(Value):
 
         return out_type
 
-    def add(self, other: Value) -> _T_ValueOpRet:
+    def op_add(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
             return None, IllegalOperation(
                 self.pos_start,
@@ -174,7 +174,7 @@ class NumericValue(Value):
             None,
         )
 
-    def sub(self, other: Value) -> _T_ValueOpRet:
+    def op_sub(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
             return None, IllegalOperation(
                 self.pos_start,
@@ -193,7 +193,7 @@ class NumericValue(Value):
             None,
         )
 
-    def div(self, other: Value) -> _T_ValueOpRet:
+    def op_div(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
             return None, IllegalOperation(
                 self.pos_start,
@@ -217,7 +217,7 @@ class NumericValue(Value):
             None,
         )
 
-    def mul(self, other: Value) -> _T_ValueOpRet:
+    def op_mul(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
             return None, IllegalOperation(
                 self.pos_start,
@@ -236,7 +236,7 @@ class NumericValue(Value):
             None,
         )
 
-    def eq(self, other: Value) -> _T_ValueOpRet:
+    def op_eq(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
             return None, IllegalOperation(
                 self.pos_start,
@@ -253,7 +253,7 @@ class NumericValue(Value):
             None,
         )
 
-    def neq(self, other: Value) -> _T_ValueOpRet:
+    def op_neq(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
             return None, IllegalOperation(
                 self.pos_start,
@@ -270,7 +270,7 @@ class NumericValue(Value):
             None,
         )
 
-    def lt(self, other: Value) -> _T_ValueOpRet:
+    def op_lt(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
             return None, IllegalOperation(
                 self.pos_start,
@@ -287,7 +287,7 @@ class NumericValue(Value):
             None,
         )
 
-    def lte(self, other: Value) -> _T_ValueOpRet:
+    def op_lte(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
             return None, IllegalOperation(
                 self.pos_start,
@@ -304,7 +304,7 @@ class NumericValue(Value):
             None,
         )
 
-    def gt(self, other: Value) -> _T_ValueOpRet:
+    def op_gt(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
             return None, IllegalOperation(
                 self.pos_start,
@@ -321,7 +321,7 @@ class NumericValue(Value):
             None,
         )
 
-    def gte(self, other: Value) -> _T_ValueOpRet:
+    def op_gte(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
             return None, IllegalOperation(
                 self.pos_start,
