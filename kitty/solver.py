@@ -93,24 +93,59 @@ class Value:
         )
 
     def op_and(self, other: "Value") -> _T_ValueOpRet:
-        return None, OperationError(
-            self.pos_start,
-            other.pos_end,
-            details=f"operation 'and' not implemented for type '{self.type_}'",
+        self_bool, error = self.bool_()
+        if error is not None:
+            return None, error
+
+        other_bool, error = other.bool_()
+        if error is not None:
+            return None, error
+
+        value = self_bool.value and other_bool.value  # type: ignore
+
+        return (
+            BoolValue(
+                self.pos_start,
+                other.pos_end,
+                value,
+            ),
+            None,
         )
 
     def op_or(self, other: "Value") -> _T_ValueOpRet:
-        return None, OperationError(
-            self.pos_start,
-            other.pos_end,
-            details=f"operation 'or' not implemented for type '{self.type_}'",
+        self_bool, error = self.bool_()
+        if error is not None:
+            return None, error
+
+        other_bool, error = other.bool_()
+        if error is not None:
+            return None, error
+
+        value = self_bool.value or other_bool.value  # type: ignore
+
+        return (
+            BoolValue(
+                self.pos_start,
+                other.pos_end,
+                value,
+            ),
+            None,
         )
 
     def not_(self) -> _T_ValueOpRet:
-        return None, OperationError(
-            self.pos_start,
-            self.pos_end,
-            details=f"operation 'not' not implemented for type '{self.type_}'",
+        self_bool, error = self.bool_()
+        if error is not None:
+            return None, error
+
+        value = not self_bool.value  # type: ignore
+
+        return (
+            BoolValue(
+                self.pos_start,
+                self.pos_end,
+                value,
+            ),
+            None,
         )
 
     def minus(self) -> _T_ValueOpRet:
@@ -146,7 +181,7 @@ class NumericValue(Value):
         self.type_ = type_
         super(NumericValue, self).__init__(pos_start, pos_end, value)
 
-    def _get_out_type(self, other: "Value") -> VarType:
+    def _get_numeric_out_type(self, other: "Value") -> VarType:
         out_type = (
             VarType.FLOAT
             if self.type_ == VarType.FLOAT or other.type_ == VarType.FLOAT
@@ -163,7 +198,7 @@ class NumericValue(Value):
                 f"'+' between '{self.type_}' and '{other.type_}'",
             )
 
-        out_type = self._get_out_type(other)
+        out_type = self._get_numeric_out_type(other)
 
         value = None
         if self.value is not None and other.value is not None:
@@ -182,7 +217,7 @@ class NumericValue(Value):
                 f"'-' between '{self.type_}' and '{other.type_}'",
             )
 
-        out_type = self._get_out_type(other)
+        out_type = self._get_numeric_out_type(other)
 
         value = None
         if self.value is not None and other.value is not None:
@@ -218,23 +253,28 @@ class NumericValue(Value):
         )
 
     def op_mul(self, other: Value) -> _T_ValueOpRet:
-        if not isinstance(other, NumericValue):
+        if not isinstance(other, (NumericValue, StringValue)):
             return None, IllegalOperation(
                 self.pos_start,
                 other.pos_end,
                 f"'*' between '{self.type_}' and '{other.type_}'",
             )
 
-        out_type = self._get_out_type(other)
-
         value = None
         if self.value is not None and other.value is not None:
             value = self.value * other.value
 
-        return (
-            NumericValue(self.pos_start, other.pos_end, out_type, value),
-            None,
-        )
+        if isinstance(other, StringValue):
+            return (
+                StringValue(self.pos_start, other.pos_end, value),
+                None,
+            )
+        else:
+            out_type = self._get_numeric_out_type(other)
+            return (
+                NumericValue(self.pos_start, other.pos_end, out_type, value),
+                None,
+            )
 
     def op_eq(self, other: Value) -> _T_ValueOpRet:
         if not isinstance(other, NumericValue):
@@ -388,9 +428,65 @@ class StringValue(Value):
 
         return StringValue(self.pos_start, other.pos_end, value), None
 
+    def op_mul(self, other: "Value") -> _T_ValueOpRet:
+        if not isinstance(other, NumericValue):
+            return None, IllegalOperation(
+                self.pos_start,
+                other.pos_end,
+                f"'*' between '{self.type_}' and '{other.type_}'",
+            )
+
+        value = None
+        if self.value is not None and other.value is not None:
+            value = self.value * other.value
+
+        return StringValue(self.pos_start, self.pos_end, value), None
+
+    def bool_(self) -> _T_ValueOpRet:
+        value = None
+        if self.value is not None:
+            value = bool(self.value)
+
+        return BoolValue(self.pos_start, self.pos_end, value), None
+
 
 class CharValue(StringValue):
     type_ = VarType.CHAR
+
+    def op_add(self, other: "Value") -> _T_ValueOpRet:
+        if not isinstance(other, (StringValue, CharValue)):
+            return None, IllegalOperation(
+                self.pos_start,
+                other.pos_end,
+                f"'+' between '{self.type_}' and '{other.type_}'",
+            )
+
+        value = None
+        if self.value is not None and other.value is not None:
+            value = self.value + other.value
+
+        return StringValue(self.pos_start, other.pos_end, value), None
+
+    def op_mul(self, other: "Value") -> _T_ValueOpRet:
+        if not isinstance(other, NumericValue):
+            return None, IllegalOperation(
+                self.pos_start,
+                other.pos_end,
+                f"'*' between '{self.type_}' and '{other.type_}'",
+            )
+
+        value = None
+        if self.value is not None and other.value is not None:
+            value = self.value * other.value
+
+        return StringValue(self.pos_start, self.pos_end, value), None
+
+    def bool_(self) -> _T_ValueOpRet:
+        value = None
+        if self.value is not None:
+            value = bool(self.value)
+
+        return BoolValue(self.pos_start, self.pos_end, value), None
 
 
 class BoolValue(Value):
