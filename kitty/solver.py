@@ -598,6 +598,47 @@ class NodeValueConverter:
         return node
 
 
+class ValueCaster:
+    @classmethod
+    def cast(cls, value: Value, type_: VarType) -> Value:
+        if type_ == VarType.INT:
+            return cls.as_int(value)
+        elif type_ == VarType.FLOAT:
+            return cls.as_float(value)
+        elif type_ == VarType.STR:
+            return cls.as_str(value)
+        elif type_ == VarType.CHAR:
+            return cls.as_char(value)
+        elif type_ == VarType.BOOL:
+            return cls.as_bool(value)
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def as_int(value: Value) -> NumericValue:
+        return NumericValue(
+            value.pos_start, value.pos_end, VarType.INT, int(value.value)  # type: ignore
+        )
+
+    @staticmethod
+    def as_float(value: Value) -> NumericValue:
+        return NumericValue(
+            value.pos_start, value.pos_end, VarType.FLOAT, float(value.value)  # type: ignore
+        )
+
+    @staticmethod
+    def as_str(value: Value) -> StringValue:
+        return StringValue(value.pos_start, value.pos_end, str(value.value))  # type: ignore
+
+    @staticmethod
+    def as_char(value: Value) -> CharValue:
+        return CharValue(value.pos_start, value.pos_end, str(value.value))  # type: ignore
+
+    @staticmethod
+    def as_bool(value: Value) -> BoolValue:
+        return BoolValue(value.pos_start, value.pos_end, bool(value.value))  # type: ignore
+
+
 def create_default(type_: VarType) -> ValueNode:
     if type_ in (VarType.FLOAT, VarType.INT):
         return NumericNode(

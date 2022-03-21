@@ -1,0 +1,7 @@
+var a = "25" as int
+
+var b: bool = 'a' as bool
+
+const var c: int = (("1" + "2" + "3") as int) + 5
+
+const var msg = 'l' + 'o' + 'l' + "kek " + ((5 + 10 + 100) as str)

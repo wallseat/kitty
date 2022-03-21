@@ -7,6 +7,7 @@ from kitty.ast import (
     BoolNode,
     BreakNode,
     CallNode,
+    CastNode,
     CharNode,
     CommentNode,
     ContinueNode,
@@ -211,9 +212,7 @@ class Parser:
                 ContinueNode(pos_start, self.cur_tok.pos_end.copy())
             )
 
-        node = res.register_result(
-            self.parse_bin_op(self.parse_comp_expr, (TokenType.OR, TokenType.AND))
-        )
+        node = res.register_result(self.parse_cast_expr())
 
         if res.error or not node:
             return res
@@ -301,6 +300,40 @@ class Parser:
         # self.symbol_table_stack[-1].set(var_id_tok.ctx, (var_type, var_expr))
 
         return res.register_success(VarNode(var_id_tok, var_type, var_expr, True, is_const, pos_start=pos_start))  # type: ignore
+
+    def parse_cast_expr(self) -> ParseResult:
+        res = ParseResult()
+        pos_start = self.cur_tok.pos_start.copy()
+
+        cast_node = res.register_result(
+            self.parse_bin_op(self.parse_comp_expr, (TokenType.OR, TokenType.AND))
+        )
+
+        if res.error or not cast_node:
+            return res
+
+        if self.cur_tok.type_ == TokenType.AS:
+            self.advance(res)
+
+            if self.cur_tok.type_ != TokenType.IDENTIFIER:
+                return res.register_failure(
+                    InvalidSyntaxError(
+                        pos_start,
+                        self.cur_tok.pos_end,
+                        details="Expected type identifier",
+                    )
+                )
+
+            cast_type = identifier_to_var_type(self.cur_tok)
+
+            pos_end = self.cur_tok.pos_end
+
+            self.advance(res)
+
+            return res.register_success(CastNode(cast_type, cast_node, pos_end))  # type: ignore
+
+        else:
+            return res.register_success(cast_node)
 
     def parse_comp_expr(self) -> ParseResult:
         logging.debug("Parse comp expr")

@@ -4,13 +4,15 @@ statement   : func-def
             : var-def
             : expr
 
-expr        : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
+expr        : cast-expr ((KEYWORD:and|KEYWORD:or) cast-expr)*
             : KEYWORD:ret expr?
             : KEYWORD:continue
             : KEYWORD:break
 
 var-def     : (KEYWORD:const)? KEYWORD:var IDENTIFIER
               ((COLON IDENTIFIER) (ASSIGN expr)?) | ASSIGN expr
+
+cast-expr   : comp-expr (IDENTIFIER:as IDENTIFIER)?
 
 comp-expr   : KEYWORD:not comp-expr
             : arith-expr ((EQ|LT|GT|LTE|GTE) arith-expr)*

@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional
+from typing import List, Optional
 
 from kitty.ast import (
     BaseNode,
@@ -6,6 +6,7 @@ from kitty.ast import (
     BoolNode,
     BreakNode,
     CallNode,
+    CastNode,
     ContinueNode,
     ExprNode,
     ForNode,
@@ -21,7 +22,7 @@ from kitty.ast import (
     WhileNode,
 )
 from kitty.errors import Error, ValidationError
-from kitty.solver import NodeValueConverter, create_default
+from kitty.solver import NodeValueConverter, ValueCaster, create_default
 from kitty.symbol_table import FuncSymbol, SymbolTable, VarSymbol
 from kitty.token import TokenType, VarType
 
@@ -549,6 +550,16 @@ class Validator:
 
             ast = ctx_block.node  # type: ignore
 
+        elif isinstance(ast, CastNode):
+            ctx_block = res.register_result(
+                self.validate_cast_expr(ast, parent_validation_ctx, parent_sym_table)
+            )
+
+            if res.error or not ctx_block or ctx_block.node is None:
+                return res
+
+            ast = ctx_block.node  # type: ignore
+
         return res.register_success(ast)
 
     def validate_bin_op(
@@ -926,5 +937,33 @@ class Validator:
                 ast.args[idx] = ctx_block.node  # type: ignore
 
         ast.type_ = func_sym.ret_type
+
+        return res.register_success(ast)
+
+    def validate_cast_expr(
+        self,
+        ast: CastNode,
+        parent_validation_ctx: ValidationContext,
+        parent_sym_table: SymbolTable,
+    ) -> ValidationResult:
+        cur_ctx_block = ContextBlock(parent_sym_table)
+        res = ValidationResult(cur_ctx_block)
+
+        expr_ctx_block = res.register_result(
+            self.validate_expr(ast.cast_node, parent_validation_ctx, parent_sym_table)
+        )
+
+        if res.error or not expr_ctx_block or expr_ctx_block.node is None:
+            return res
+
+        if isinstance(expr_ctx_block.node, ValueNode):
+            value = NodeValueConverter.node_to_value(expr_ctx_block.node)
+            casted_value = ValueCaster.cast(value, ast.type_)
+            casted_node = NodeValueConverter.value_to_node(casted_value)
+
+            ast = casted_node  # type: ignore
+
+        else:
+            ast.cast_node = expr_ctx_block.node  # type: ignore
 
         return res.register_success(ast)

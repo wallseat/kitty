@@ -378,6 +378,9 @@ class Lexer:
         elif identity == "const":
             return Token(TokenType.CONST, pos_start=start_pos, pos_end=self.pos)
 
+        elif identity == "as":
+            return Token(TokenType.AS, pos_start=start_pos, pos_end=self.pos)
+
         else:
             return Token(
                 TokenType.IDENTIFIER,

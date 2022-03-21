@@ -45,6 +45,7 @@ class TokenType(Enum):
     OR = "or"  # or
     NOT = "not"  # not
     IN = "in"  # in
+    AS = "as"  # as
     CONTINUE = "continue"  # continue
     BREAK = "break"  # break
 
@@ -55,10 +56,8 @@ class TokenType(Enum):
 
     NUM_INT = "num_int"  # 5
     NUM_FLOAT = "num_float"  # 5.0 or 5f
-
     STR = "str"  # "string"
     CHAR = "char"  # 'a'
-
     BOOL = "bool"  # true | false
 
     EOF = "eof"  # end of file

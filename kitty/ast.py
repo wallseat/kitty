@@ -44,6 +44,32 @@ class ExprNode(BaseNode):
     type_: VarType
 
 
+class CastNode(ExprNode):
+    cast_node: ExprNode
+
+    def __init__(self, cast_type: VarType, cast_node: ExprNode, pos_end: Position):
+        self.cast_node = cast_node
+        self.type_ = cast_type
+
+        super(CastNode, self).__init__(cast_node.pos_start, pos_end)
+
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (
+            (indent * ind_c)
+            + "CastExpr[\n"
+            + (indent * ind_c)
+            + f"{indent}cast_type: {self.type_}\n"
+            + (indent * ind_c)
+            + f"{indent}cast_node: [\n"
+            + self.cast_node.pretty_repr(ind_c + 2, indent)
+            + "\n"
+            + (indent * ind_c)
+            + f"{indent}]\n"
+            + (indent * ind_c)
+            + "]"
+        )
+
+
 class ValueNode(ExprNode):
     token: Token
 
