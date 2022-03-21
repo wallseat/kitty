@@ -402,10 +402,10 @@ class ContinueNode(ExprNode):
 
 
 class WhileNode(ExprNode):
-    condition: BaseNode
+    condition: ExprNode
     body: Optional[BaseNode]
 
-    def __init__(self, condition: BaseNode, body: Optional[BaseNode]):
+    def __init__(self, condition: ExprNode, body: Optional[BaseNode]):
         self.condition = condition
         self.body = body
 

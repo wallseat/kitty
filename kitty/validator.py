@@ -495,12 +495,24 @@ class Validator:
             ast = ctx_block.node  # type: ignore
 
         elif isinstance(ast, ForNode):
-            raise NotImplementedError
-            # TODO: for validation
+            ctx_block = res.register_result(
+                self.validate_for_expr(ast, parent_validation_ctx, parent_sym_table)
+            )
+
+            if res.error or not ctx_block or ctx_block.node is None:
+                return res
+
+            ast = ctx_block.node  # type: ignore
 
         elif isinstance(ast, WhileNode):
-            raise NotImplementedError
-            # TODO: while validation
+            ctx_block = res.register_result(
+                self.validate_while_expr(ast, parent_validation_ctx, parent_sym_table)
+            )
+
+            if res.error or not ctx_block or ctx_block.node is None:
+                return res
+
+            ast = ctx_block.node  # type: ignore
 
         elif isinstance(ast, ListNode):
             raise NotImplementedError
@@ -674,7 +686,7 @@ class Validator:
                     )
 
                 body_validation_res = self.validate_statements(
-                    case[1], parent_validation_ctx, parent_sym_table
+                    case[1], parent_validation_ctx, cur_ctx_block.sym_table
                 )
                 body_ctx_block = body_validation_res.ctx_block
 
@@ -737,6 +749,7 @@ class Validator:
         parent_validation_ctx: ValidationContext,
         parent_sym_table: SymbolTable,
     ) -> ValidationResult:
+        # TODO
         raise NotImplementedError
 
     def validate_while_expr(
@@ -745,7 +758,46 @@ class Validator:
         parent_validation_ctx: ValidationContext,
         parent_sym_table: SymbolTable,
     ) -> ValidationResult:
-        raise NotImplementedError
+        cur_ctx_block = ContextBlock(parent_sym_table)
+        res = ValidationResult(cur_ctx_block)
+
+        condition_ctx_block = res.register_result(
+            self.validate_expr(
+                ast.condition,
+                ValidationContext(parent_validation_ctx, expr_type=VarType.BOOL),
+                parent_sym_table,
+            )
+        )
+
+        if res.error or not condition_ctx_block or condition_ctx_block.node is None:
+            return res
+
+        body_ctx_block = None
+        if isinstance(ast.body, StatementsNode):
+            body_ctx_block = res.register_result(
+                self.validate_statements(
+                    ast.body,
+                    parent_validation_ctx,
+                    cur_ctx_block.sym_table,
+                )
+            )
+
+        elif isinstance(ast.body, ExprNode):
+            body_ctx_block = res.register_result(
+                self.validate_expr(
+                    ast.body,
+                    parent_validation_ctx,
+                    parent_sym_table,
+                )
+            )
+
+        if res.error or not body_ctx_block or body_ctx_block.node is None:
+            return res
+
+        ast.condition = condition_ctx_block.node  # type: ignore
+        ast.body = body_ctx_block.node  # type: ignore
+
+        return res.register_success(ast)
 
     def validate_list_expr(
         self,
@@ -782,13 +834,10 @@ class Validator:
                 )
             )
 
-        if isinstance(sym.ref_node.value_node, ValueNode):
-            value_node = sym.ref_node.value_node.copy()  # type: ignore
-            value_node.pos_start, value_node.pos_end = ast.pos_start, ast.pos_end
-            ast = value_node  # type: ignore
+        # TODO: Нужны модификаторы const чтобы можно было понять,
+        # что переменная не изменяемая и ее значение можно подставить везде
 
-        else:
-            ast.type_ = sym.type_  # type: ignore
+        ast.type_ = sym.type_  # type: ignore
 
         return res.register_success(ast)
 

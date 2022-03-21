@@ -1,9 +1,19 @@
-while 5 + i > 20 -> i = i + 1
+var a = 1
+var b = 2
+var c = 3
 
-while i < 65535 {
-    i = i * 2
-
-    print(i)
+func print(msg: str) -> str {
+    ret msg
 }
 
-while (lol + kek) < kek_lol -> not_lol(lol, kek)
+func not_lol(a: int, b: int) -> int -> a + b
+
+while 5 + b > 20 -> b = b + 1
+
+while a < 65535 {
+    a = a * 2
+
+    print("lol kek")
+}
+
+while (a + b) < c -> not_lol(a, b)
