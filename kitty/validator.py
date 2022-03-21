@@ -121,6 +121,7 @@ class Validator:
             return self.validate_statements(self.ast, root_ctx, root_sym_table)
 
         else:
+            print(self.ast)
             return ValidationResult(ContextBlock(root_sym_table)).register_failure(
                 ValidationError(
                     self.ast.pos_start,
@@ -149,7 +150,7 @@ class Validator:
                 )
 
             elif isinstance(stmt, VarNode):
-                if stmt.is_define:
+                if stmt.is_definition:
                     ctx_block = res.register_result(
                         self.validate_var_def(
                             stmt, parent_validation_ctx, cur_ctx_block.sym_table
@@ -273,7 +274,7 @@ class Validator:
 
         var_name: str = ast.var_id_tok.ctx
 
-        if not ast.is_define:
+        if not ast.is_definition:
             return res.register_failure(
                 ValidationError(
                     ast.pos_start,
@@ -302,6 +303,15 @@ class Validator:
 
             if res.error or not ctx_block or ctx_block.node is None:
                 return res
+
+            if ast.is_const and not isinstance(ctx_block.node, ValueNode):
+                return res.register_failure(
+                    ValidationError(
+                        ast.pos_start,
+                        ast.pos_end,
+                        details="the constant must be a compile time variable",
+                    )
+                )
 
             if ast.type_ == VarType.UNTYPED:
                 ast.type_ = ctx_block.node.type_  # type: ignore
@@ -353,6 +363,15 @@ class Validator:
                     ast.pos_start,
                     ast.pos_end,
                     details=f"name '{var_name}' is not a variable",
+                )
+            )
+
+        if sym.ref_node.is_const:
+            return res.register_failure(
+                ValidationError(
+                    ast.pos_start,
+                    ast.pos_end,
+                    details=f"cannot assign a value to constant",
                 )
             )
 
@@ -834,10 +853,13 @@ class Validator:
                 )
             )
 
-        # TODO: Нужны модификаторы const чтобы можно было понять,
-        # что переменная не изменяемая и ее значение можно подставить везде
+        if sym.ref_node.is_const and isinstance(sym.ref_node.value_node, ValueNode):
+            value_node = sym.ref_node.value_node.copy()  # type: ignore
+            value_node.pos_start, value_node.pos_end = ast.pos_start, ast.pos_end
+            ast = value_node  # type: ignore
 
-        ast.type_ = sym.type_  # type: ignore
+        else:
+            ast.type_ = sym.type_  # type: ignore
 
         return res.register_success(ast)
 

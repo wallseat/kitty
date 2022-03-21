@@ -164,7 +164,7 @@ class Parser:
 
             return res.register_success(func_def)
 
-        elif self.cur_tok.type_ == TokenType.VAR:  # var define
+        elif self.cur_tok.type_ in (TokenType.VAR, TokenType.CONST):  # var define
             var_assign = res.register_result(self.parse_var_def())
             if res.error:
                 return res
@@ -226,6 +226,12 @@ class Parser:
         logging.debug("Parse var assignment")
 
         res = ParseResult()
+        is_const = False
+        pos_start = self.cur_tok.pos_start.copy()
+
+        if self.cur_tok.type_ == TokenType.CONST:
+            is_const = True
+            self.advance(res)
 
         if self.cur_tok.type_ != TokenType.VAR:
             return res.register_failure(
@@ -274,6 +280,15 @@ class Parser:
             self.advance(res)
             var_expr = res.register_result(self.parse_expr())
 
+        elif is_const and var_expr is None:
+            res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="the constant must be assigned a value",
+                )
+            )
+
         elif var_type == VarType.UNTYPED:
             res.register_failure(
                 InvalidSyntaxError(
@@ -285,7 +300,7 @@ class Parser:
 
         # self.symbol_table_stack[-1].set(var_id_tok.ctx, (var_type, var_expr))
 
-        return res.register_success(VarNode(var_id_tok, var_type, var_expr, True))  # type: ignore
+        return res.register_success(VarNode(var_id_tok, var_type, var_expr, True, is_const, pos_start=pos_start))  # type: ignore
 
     def parse_comp_expr(self) -> ParseResult:
         logging.debug("Parse comp expr")
@@ -622,7 +637,7 @@ class Parser:
         if res.error or not expr:
             return res
 
-        return res.register_success(VarNode(var_id_tok, VarType.UNTYPED, expr, False))  # type: ignore
+        return res.register_success(VarNode(var_id_tok, VarType.UNTYPED, expr, False, False))  # type: ignore
 
     def parse_list_expr(self) -> ParseResult:
         logging.debug("Parse list expr")
@@ -1063,7 +1078,7 @@ class Parser:
                 )
             )
 
-        return res.register_success(WhileNode(condition, body))
+        return res.register_success(WhileNode(condition, body))  # type: ignore
 
     def parse_func_def(self) -> ParseResult:
         logging.debug("Parse func def")
@@ -1131,7 +1146,7 @@ class Parser:
 
             arg_type = identifier_to_var_type(self.cur_tok)
 
-            args.append(VarNode(arg_id, arg_type, None, True))
+            args.append(VarNode(arg_id, arg_type, None, True, False))
 
             self.advance(res)
 
@@ -1173,7 +1188,7 @@ class Parser:
 
                 arg_type = identifier_to_var_type(self.cur_tok)
 
-                args.append(VarNode(arg_id, arg_type, None, True))
+                args.append(VarNode(arg_id, arg_type, None, True, False))
 
                 self.advance(res)
 

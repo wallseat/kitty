@@ -15,3 +15,7 @@ var g: int = -9 * e
 var h: float
 
 var i = 5 * g * 1.0 * h
+
+const var j: int = 5
+
+const var k = 10 * 9.5 + j

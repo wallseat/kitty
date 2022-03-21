@@ -375,6 +375,9 @@ class Lexer:
         elif identity == "break":
             return Token(TokenType.BREAK, pos_start=start_pos, pos_end=self.pos)
 
+        elif identity == "const":
+            return Token(TokenType.CONST, pos_start=start_pos, pos_end=self.pos)
+
         else:
             return Token(
                 TokenType.IDENTIFIER,

@@ -98,6 +98,7 @@ if __name__ == "__main__":
 
         if res.error:
             print(res.error)
+            exit(-1)
         elif res.node:
             print(res.node.pretty_repr(indent=" " * args.p_indent))
         else:
@@ -115,6 +116,7 @@ if __name__ == "__main__":
 
         if res.error:
             print(res.error)
+            exit(-1)
         elif not res.node:
             print("Empty file!")
             exit(0)

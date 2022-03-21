@@ -39,6 +39,7 @@ class TokenType(Enum):
     FOR = "for"  # for
     RET = "ret"  # ret
     VAR = "var"  # var
+    CONST = "const"  # const
     FUNC = "func"  # func
     AND = "and"  # and
     OR = "or"  # or

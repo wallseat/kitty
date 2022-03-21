@@ -9,7 +9,7 @@ expr        : comp-expr ((KEYWORD:and|KEYWORD:or) comp-expr)*
             : KEYWORD:continue
             : KEYWORD:break
 
-var-def     : KEYWORD:var IDENTIFIER
+var-def     : (KEYWORD:const)? KEYWORD:var IDENTIFIER
               ((COLON IDENTIFIER) (ASSIGN expr)?) | ASSIGN expr
 
 comp-expr   : KEYWORD:not comp-expr
@@ -19,7 +19,7 @@ arith-expr  : term ((ADD|SUB) term)*
 
 term        : factor ((MUL|DIV) factor)*
 
-factor      : (ADD|SUB) factor 
+factor      : (ADD|SUB) factor
             : call
 
 call        : atom (L_BRC (expr (COMMA expr)*)? R_BRC)?

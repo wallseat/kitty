@@ -162,22 +162,27 @@ class UnaryOpNode(ExprNode):
 class VarNode(ExprNode):
     var_id_tok: Token
     value_node: Optional[ExprNode]
-    is_define: bool
+    is_const: bool
+
+    is_definition: bool
 
     def __init__(
         self,
         var_id_tok: Token,
         var_type: VarType,
         value_node: Optional[ExprNode],
-        is_define: bool,
+        is_definition: bool,
+        is_const: bool,
+        pos_start: Position = None,
     ):
         self.var_id_tok = var_id_tok
         self.value_node = value_node
         self.type_ = var_type
-        self.is_define = is_define
+        self.is_definition = is_definition
+        self.is_const = is_const
 
         super(VarNode, self).__init__(
-            var_id_tok.pos_start,
+            var_id_tok.pos_start if pos_start is None else pos_start,
             value_node.pos_end if value_node else var_id_tok.pos_end,
         )
 
@@ -199,7 +204,9 @@ class VarNode(ExprNode):
                 else ""
             )
             + (indent * ind_c)
-            + f"{indent}is_define: {self.is_define}\n"
+            + f"{indent}is_definition: {self.is_definition},\n"
+            + (indent * ind_c)
+            + f"{indent}is_const: {self.is_const}\n"
             + (indent * ind_c)
             + "]"
         )
