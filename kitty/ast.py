@@ -1,7 +1,8 @@
 from typing import List, Optional, Tuple, Union
 
 from kitty.position import Position
-from kitty.token import Token, TokenType, VarType
+from kitty.token import Token, TokenType
+from kitty.types import VarType
 
 
 class BaseNode:
@@ -45,13 +46,20 @@ class ExprNode(BaseNode):
 
 
 class CastNode(ExprNode):
+    cast_type_tok: Token
     cast_node: ExprNode
 
-    def __init__(self, cast_type: VarType, cast_node: ExprNode, pos_end: Position):
+    def __init__(
+        self,
+        cast_type_tok: Token,
+        cast_type: VarType,
+        cast_node: ExprNode,
+    ):
+        self.cast_type_tok = cast_type_tok
         self.cast_node = cast_node
         self.type_ = cast_type
 
-        super(CastNode, self).__init__(cast_node.pos_start, pos_end)
+        super(CastNode, self).__init__(cast_node.pos_start, cast_type_tok.pos_end)
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (
@@ -187,6 +195,8 @@ class UnaryOpNode(ExprNode):
 
 class VarNode(ExprNode):
     var_id_tok: Token
+    var_type_tok: Token
+
     value_node: Optional[ExprNode]
     is_const: bool
 
@@ -195,6 +205,7 @@ class VarNode(ExprNode):
     def __init__(
         self,
         var_id_tok: Token,
+        var_type_tok: Token,
         var_type: VarType,
         value_node: Optional[ExprNode],
         is_definition: bool,
@@ -202,6 +213,8 @@ class VarNode(ExprNode):
         pos_start: Position = None,
     ):
         self.var_id_tok = var_id_tok
+        self.var_type_tok = var_type_tok
+
         self.value_node = value_node
         self.type_ = var_type
         self.is_definition = is_definition
@@ -209,7 +222,11 @@ class VarNode(ExprNode):
 
         super(VarNode, self).__init__(
             var_id_tok.pos_start if pos_start is None else pos_start,
-            value_node.pos_end if value_node else var_id_tok.pos_end,
+            value_node.pos_end
+            if value_node
+            else var_type_tok.pos_end
+            if var_type_tok
+            else var_id_tok.pos_end,
         )
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:

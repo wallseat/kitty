@@ -1,4 +1,4 @@
-func a() -> noret {
+func a() -> void {
     var a: int = 1 + 1
 
     ret
@@ -15,7 +15,7 @@ func c(a: int) -> int {
 func d(a: int, b: int, c: int) -> int {
     func wrapper(b: int) -> int -> a * b
 
-    ret wrapper(a, c)
+    ret wrapper(a)
 }
 
 func e() -> str -> "lol kek"

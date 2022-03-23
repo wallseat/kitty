@@ -25,7 +25,8 @@ from kitty.ast import (
     WhileNode,
 )
 from kitty.errors import Error, InvalidSyntaxError
-from kitty.token import Token, TokenType, VarType, identifier_to_var_type
+from kitty.token import Token, TokenType
+from kitty.types import VarType, identifier_to_var_type
 
 
 class ParseResult:
@@ -183,6 +184,7 @@ class Parser:
 
         res = ParseResult()
         pos_start = self.cur_tok.pos_start.copy()
+        pos_end = self.cur_tok.pos_end.copy()
 
         if self.cur_tok.type_ == TokenType.RET:
             self.advance(res)
@@ -196,8 +198,10 @@ class Parser:
                 if not expr:
                     self.retreat(res.last_registered_advancements)
 
+                pos_end = self.cur_tok.pos_end.copy()
+
             return res.register_success(
-                ReturnNode(expr, pos_start, self.cur_tok.pos_end.copy())  # type: ignore
+                ReturnNode(expr, pos_start, pos_end)  # type: ignore
             )
 
         elif self.cur_tok.type_ == TokenType.BREAK:
@@ -256,11 +260,13 @@ class Parser:
         self.advance(res)
 
         var_type = VarType.UNTYPED
+        var_type_tok = None
 
         if self.cur_tok.type_ == TokenType.COLON:
             self.advance(res)
 
             if self.cur_tok.type_ == TokenType.IDENTIFIER:
+                var_type_tok = self.cur_tok
                 var_type = identifier_to_var_type(self.cur_tok)
 
                 self.advance(res)
@@ -299,7 +305,7 @@ class Parser:
 
         # self.symbol_table_stack[-1].set(var_id_tok.ctx, (var_type, var_expr))
 
-        return res.register_success(VarNode(var_id_tok, var_type, var_expr, True, is_const, pos_start=pos_start))  # type: ignore
+        return res.register_success(VarNode(var_id_tok, var_type_tok, var_type, var_expr, True, is_const, pos_start=pos_start))  # type: ignore
 
     def parse_cast_expr(self) -> ParseResult:
         res = ParseResult()
@@ -324,13 +330,12 @@ class Parser:
                     )
                 )
 
+            cast_type_tok = self.cur_tok
             cast_type = identifier_to_var_type(self.cur_tok)
-
-            pos_end = self.cur_tok.pos_end
 
             self.advance(res)
 
-            return res.register_success(CastNode(cast_type, cast_node, pos_end))  # type: ignore
+            return res.register_success(CastNode(cast_type_tok, cast_type, cast_node))  # type: ignore
 
         else:
             return res.register_success(cast_node)
@@ -525,6 +530,7 @@ class Parser:
                 return res
 
             if self.cur_tok.type_ == TokenType.R_BRC:
+                expr.pos_end = self.cur_tok.pos_end
                 self.advance(res)
 
                 logging.debug(f"Parsed expr in atom")
@@ -670,7 +676,7 @@ class Parser:
         if res.error or not expr:
             return res
 
-        return res.register_success(VarNode(var_id_tok, VarType.UNTYPED, expr, False, False))  # type: ignore
+        return res.register_success(VarNode(var_id_tok, None, VarType.UNTYPED, expr, False, False))  # type: ignore
 
     def parse_list_expr(self) -> ParseResult:
         logging.debug("Parse list expr")
@@ -1177,9 +1183,10 @@ class Parser:
                     )
                 )
 
+            arg_type_tok = self.cur_tok
             arg_type = identifier_to_var_type(self.cur_tok)
 
-            args.append(VarNode(arg_id, arg_type, None, True, False))
+            args.append(VarNode(arg_id, arg_type_tok, arg_type, None, True, False))
 
             self.advance(res)
 
@@ -1219,9 +1226,10 @@ class Parser:
                         )
                     )
 
+                arg_type_tok = self.cur_tok
                 arg_type = identifier_to_var_type(self.cur_tok)
 
-                args.append(VarNode(arg_id, arg_type, None, True, False))
+                args.append(VarNode(arg_id, arg_type_tok, arg_type, None, True, False))
 
                 self.advance(res)
 
@@ -1257,7 +1265,7 @@ class Parser:
         self.advance(res)
 
         if self.cur_tok.type_ == TokenType.IDENTIFIER:
-            ret_type = identifier_to_var_type(self.cur_tok, can_untyped=True)
+            ret_type = identifier_to_var_type(self.cur_tok)
 
         else:
             return res.register_failure(

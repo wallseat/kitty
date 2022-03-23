@@ -1,11 +1,13 @@
 from typing import Any, Optional, Tuple, Union
 
 from kitty.ast import BoolNode, CharNode, ExprNode, NumericNode, StrNode, ValueNode
-from kitty.errors import IllegalOperation, OperationError
+from kitty.errors import CastError, IllegalOperation, OperationError
 from kitty.position import Position
-from kitty.token import Token, TokenType, VarType
+from kitty.token import Token, TokenType
+from kitty.types import VarType
 
 _T_ValueOpRet = Tuple[Optional["Value"], Optional[OperationError]]
+_T_CastRet = Tuple[Optional["Value"], Optional[CastError]]
 
 
 class Value:
@@ -600,19 +602,23 @@ class NodeValueConverter:
 
 class ValueCaster:
     @classmethod
-    def cast(cls, value: Value, type_: VarType) -> Value:
+    def cast(cls, value: Value, type_: VarType) -> _T_CastRet:
         if type_ == VarType.INT:
-            return cls.as_int(value)
+            return cls.as_int(value), None
         elif type_ == VarType.FLOAT:
-            return cls.as_float(value)
+            return cls.as_float(value), None
         elif type_ == VarType.STR:
-            return cls.as_str(value)
+            return cls.as_str(value), None
         elif type_ == VarType.CHAR:
-            return cls.as_char(value)
+            return cls.as_char(value), None
         elif type_ == VarType.BOOL:
-            return cls.as_bool(value)
+            return cls.as_bool(value), None
         else:
-            raise NotImplementedError
+            return None, CastError(
+                value.pos_start,
+                value.pos_end,
+                f"Can't cast type '{value.type_.value}' to  type '{type_.value}'",
+            )
 
     @staticmethod
     def as_int(value: Value) -> NumericValue:

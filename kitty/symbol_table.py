@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Tuple, Union
 
 from kitty.ast import BaseNode, FuncNode, VarNode
-from kitty.token import VarType
+from kitty.types import VarType
 
 
 class BaseSymbol:

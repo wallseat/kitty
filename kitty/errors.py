@@ -83,3 +83,8 @@ class IllegalOperation(OperationError):
         super(IllegalOperation, self).__init__(
             pos_start, pos_end, "illegal operation " + additional_info
         )
+
+
+class CastError(Error):
+    def __init__(self, pos_start: Position, pos_end: Position, details: str = ""):
+        super(CastError, self).__init__(pos_start, pos_end, "Cast Error", details)

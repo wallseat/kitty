@@ -63,17 +63,6 @@ class TokenType(Enum):
     EOF = "eof"  # end of file
 
 
-class VarType(Enum):
-    INT = "int"
-    FLOAT = "float"
-    STR = "str"
-    CHAR = "char"
-    BOOL = "bool"
-
-    GENERIC = "generic"
-    UNTYPED = "untyped"
-
-
 class Token:
     type_: TokenType
     ctx: Any
@@ -112,20 +101,3 @@ class Token:
                 return f"{self.type_}:{self.ctx}"
 
         return f"{self.type_}"
-
-
-def identifier_to_var_type(token: Token, can_untyped: bool = False) -> VarType:
-    if token.ctx == "int":
-        return VarType.INT
-    elif token.ctx == "float":
-        return VarType.FLOAT
-    elif token.ctx == "str":
-        return VarType.STR
-    elif token.ctx == "char":
-        return VarType.CHAR
-    elif token.ctx == "bool":
-        return VarType.BOOL
-    elif can_untyped and token.ctx in ("noret", "untyped"):
-        return VarType.UNTYPED
-    else:
-        raise NotImplementedError("Generic types is unsupported yet!")

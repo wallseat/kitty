@@ -7,6 +7,7 @@ from kitty.ast import (
     BreakNode,
     CallNode,
     CastNode,
+    CommentNode,
     ContinueNode,
     ExprNode,
     ForNode,
@@ -24,7 +25,8 @@ from kitty.ast import (
 from kitty.errors import Error, ValidationError
 from kitty.solver import NodeValueConverter, ValueCaster, create_default
 from kitty.symbol_table import FuncSymbol, SymbolTable, VarSymbol
-from kitty.token import TokenType, VarType
+from kitty.token import TokenType
+from kitty.types import VarType
 
 
 class ContextBlock:
@@ -171,6 +173,13 @@ class Validator:
                     )
                 )
 
+            elif isinstance(stmt, CommentNode):
+                ctx_block = res.register_result(
+                    self.validate_comment(
+                        stmt, parent_validation_ctx, cur_ctx_block.sym_table
+                    )
+                )
+
             else:
                 return res.register_failure(
                     ValidationError(
@@ -241,9 +250,9 @@ class Validator:
                         details=(
                             "invalid expr type, "
                             "expected type "
-                            f"'{cur_validation_ctx.return_type.name}', "  # type: ignore
+                            f"'{cur_validation_ctx.return_type.value}', "  # type: ignore
                             "got "
-                            f"'{ctx_block.node.type_.name}'"  # type: ignore
+                            f"'{ctx_block.node.type_.value}'"  # type: ignore
                         ),
                     )
                 )
@@ -290,6 +299,15 @@ class Validator:
                     ast.pos_start,
                     ast.pos_end,
                     details=f"name '{var_name}' is already defined",
+                )
+            )
+
+        if ast.type_ == VarType.VOID:
+            return res.register_failure(
+                ValidationError(
+                    ast.pos_start,
+                    ast.pos_end,
+                    details=f"variable cannot be of type void",
                 )
             )
 
@@ -394,9 +412,9 @@ class Validator:
                     ast.pos_end,
                     details=(
                         "the declared type "
-                        f"'{sym.type_.name}' "
+                        f"'{sym.type_.value}' "
                         "of the variable does not match the data type "
-                        f"'{ctx_block.node.type_.name}'"  # type: ignore
+                        f"'{ctx_block.node.type_.value}'"  # type: ignore
                     ),
                 )
             )
@@ -444,15 +462,31 @@ class Validator:
                             details=(
                                 "return type does not match declared type, "
                                 "expected "
-                                f"'{parent_validation_ctx.return_type.name}' "  # type: ignore
+                                f"'{parent_validation_ctx.return_type.value}' "  # type: ignore
                                 "got "
-                                f"'{ctx_block.node.type_.name}'"  # type: ignore
+                                f"'{ctx_block.node.type_.value}'"  # type: ignore
                             ),
                         )
                     )
 
                 ast.ret_node = ctx_block.node  # type: ignore
                 ast.type_ = ctx_block.node.type_  # type: ignore
+
+            else:
+                if parent_validation_ctx.return_type != VarType.VOID:
+                    return res.register_failure(
+                        ValidationError(
+                            ast.pos_start,
+                            ast.pos_end,
+                            details=(
+                                "return type does not match declared type, "
+                                "expected "
+                                f"'{parent_validation_ctx.return_type.value}' "  # type: ignore
+                                "got "
+                                f"'{VarType.VOID.value}'"  # type: ignore
+                            ),
+                        )
+                    )
 
         elif isinstance(ast, BreakNode):
             if not parent_validation_ctx.can_break:
@@ -559,6 +593,17 @@ class Validator:
                 return res
 
             ast = ctx_block.node  # type: ignore
+
+        return res.register_success(ast)
+
+    def validate_comment(
+        self,
+        ast: CommentNode,
+        parent_validation_ctx: ValidationContext,
+        parent_sym_table: SymbolTable,
+    ) -> ValidationResult:
+        cur_ctx_block = ContextBlock(parent_sym_table)
+        res = ValidationResult(cur_ctx_block)
 
         return res.register_success(ast)
 
@@ -958,8 +1003,13 @@ class Validator:
 
         if isinstance(expr_ctx_block.node, ValueNode):
             value = NodeValueConverter.node_to_value(expr_ctx_block.node)
-            casted_value = ValueCaster.cast(value, ast.type_)
-            casted_node = NodeValueConverter.value_to_node(casted_value)
+            casted_value, error = ValueCaster.cast(value, ast.type_)
+
+            if error:
+                error.pos_end = ast.cast_type_tok.pos_end
+                return res.register_failure(error)
+
+            casted_node = NodeValueConverter.value_to_node(casted_value)  # type: ignore
 
             ast = casted_node  # type: ignore
 
