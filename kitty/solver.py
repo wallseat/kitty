@@ -4,14 +4,23 @@ from kitty.ast import BoolNode, CharNode, ExprNode, NumericNode, StrNode, ValueN
 from kitty.errors import CastError, IllegalOperation, OperationError
 from kitty.position import Position
 from kitty.token import Token, TokenType
-from kitty.types import VarType
+from kitty.types import (
+    Type_,
+    TYPE_STR,
+    TYPE_INT,
+    TYPE_FLOAT,
+    TYPE_BOOL,
+    TYPE_CHAR,
+    TYPE_VOID,
+    TYPE_UNTYPED,
+)
 
 _T_ValueOpRet = Tuple[Optional["Value"], Optional[OperationError]]
 _T_CastRet = Tuple[Optional["Value"], Optional[CastError]]
 
 
 class Value:
-    type_: VarType
+    type_: Type_
     value: Optional[Any]
 
     pos_start: Position
@@ -177,17 +186,17 @@ class NumericValue(Value):
         self,
         pos_start: Position,
         pos_end: Position,
-        type_: VarType,
+        type_: Type_,
         value: Optional[Union[int, float]] = None,
     ):
         self.type_ = type_
         super(NumericValue, self).__init__(pos_start, pos_end, value)
 
-    def _get_numeric_out_type(self, other: "Value") -> VarType:
+    def _get_numeric_out_type(self, other: "Value") -> Type_:
         out_type = (
-            VarType.FLOAT
-            if self.type_ == VarType.FLOAT or other.type_ == VarType.FLOAT
-            else VarType.INT
+            TYPE_FLOAT
+            if self.type_ == TYPE_FLOAT or other.type_ == TYPE_FLOAT
+            else TYPE_INT
         )
 
         return out_type
@@ -238,7 +247,7 @@ class NumericValue(Value):
                 f"'/' between '{self.type_}' and '{other.type_}'",
             )
 
-        out_type = VarType.FLOAT
+        out_type = TYPE_FLOAT
 
         if other.value == 0:
             return None, OperationError(
@@ -409,7 +418,7 @@ class NumericValue(Value):
 
 
 class StringValue(Value):
-    type_ = VarType.STR
+    type_ = TYPE_STR
 
     def __init__(
         self, pos_start: Position, pos_end: Position, value: Optional[str] = None
@@ -453,7 +462,7 @@ class StringValue(Value):
 
 
 class CharValue(StringValue):
-    type_ = VarType.CHAR
+    type_ = TYPE_CHAR
 
     def op_add(self, other: "Value") -> _T_ValueOpRet:
         if not isinstance(other, (StringValue, CharValue)):
@@ -492,7 +501,7 @@ class CharValue(StringValue):
 
 
 class BoolValue(Value):
-    type_ = VarType.BOOL
+    type_ = TYPE_BOOL
 
     def __init__(
         self, pos_start: Position, pos_end: Position, value: Optional[bool] = None
@@ -538,11 +547,11 @@ class NodeValueConverter:
         if isinstance(node, NumericNode):
             if isinstance(node.token.ctx, int):
                 return NumericValue(
-                    node.pos_start, node.pos_end, VarType.INT, node.token.ctx
+                    node.pos_start, node.pos_end, TYPE_INT, node.token.ctx
                 )
             else:
                 return NumericValue(
-                    node.pos_start, node.pos_end, VarType.FLOAT, node.token.ctx
+                    node.pos_start, node.pos_end, TYPE_FLOAT, node.token.ctx
                 )
 
         elif isinstance(node, StrNode):
@@ -555,13 +564,13 @@ class NodeValueConverter:
             return BoolValue(node.pos_start, node.pos_end, node.token.ctx)
 
         else:
-            if node.type_ in (VarType.FLOAT, VarType.INT):
+            if node.type_ in (TYPE_FLOAT, TYPE_INT):
                 return NumericValue(node.pos_start, node.pos_end, node.type_)
-            elif node.type_ == VarType.STR:
+            elif node.type_ == TYPE_STR:
                 return StringValue(node.pos_start, node.pos_end)
-            elif node.type_ == VarType.CHAR:
+            elif node.type_ == TYPE_CHAR:
                 return CharValue(node.pos_start, node.pos_end)
-            elif node.type_ == VarType.BOOL:
+            elif node.type_ == TYPE_BOOL:
                 return BoolValue(node.pos_start, node.pos_end)
             else:
                 raise Exception("Invalid type of node to value convert")
@@ -571,7 +580,7 @@ class NodeValueConverter:
         node: ValueNode
 
         if isinstance(value, NumericValue):
-            if value.type_ == VarType.INT:
+            if value.type_ == TYPE_INT:
                 tok_type = TokenType.NUM_INT
             else:
                 tok_type = TokenType.NUM_FLOAT
@@ -602,16 +611,16 @@ class NodeValueConverter:
 
 class ValueCaster:
     @classmethod
-    def cast(cls, value: Value, type_: VarType) -> _T_CastRet:
-        if type_ == VarType.INT:
+    def cast(cls, value: Value, type_: Type_) -> _T_CastRet:
+        if type_ == TYPE_INT:
             return cls.as_int(value), None
-        elif type_ == VarType.FLOAT:
+        elif type_ == TYPE_FLOAT:
             return cls.as_float(value), None
-        elif type_ == VarType.STR:
+        elif type_ == TYPE_STR:
             return cls.as_str(value), None
-        elif type_ == VarType.CHAR:
+        elif type_ == TYPE_CHAR:
             return cls.as_char(value), None
-        elif type_ == VarType.BOOL:
+        elif type_ == TYPE_BOOL:
             return cls.as_bool(value), None
         else:
             return None, CastError(
@@ -623,13 +632,13 @@ class ValueCaster:
     @staticmethod
     def as_int(value: Value) -> NumericValue:
         return NumericValue(
-            value.pos_start, value.pos_end, VarType.INT, int(value.value)  # type: ignore
+            value.pos_start, value.pos_end, TYPE_INT, int(value.value)  # type: ignore
         )
 
     @staticmethod
     def as_float(value: Value) -> NumericValue:
         return NumericValue(
-            value.pos_start, value.pos_end, VarType.FLOAT, float(value.value)  # type: ignore
+            value.pos_start, value.pos_end, TYPE_FLOAT, float(value.value)  # type: ignore
         )
 
     @staticmethod
@@ -645,22 +654,22 @@ class ValueCaster:
         return BoolValue(value.pos_start, value.pos_end, bool(value.value))  # type: ignore
 
 
-def create_default(type_: VarType) -> ValueNode:
-    if type_ in (VarType.FLOAT, VarType.INT):
+def create_default(type_: Type_) -> ValueNode:
+    if type_ in (TYPE_FLOAT, TYPE_INT):
         return NumericNode(
             Token(
-                TokenType.NUM_INT if type_ == VarType.INT else TokenType.NUM_FLOAT,
+                TokenType.NUM_INT if type_ == TYPE_INT else TokenType.NUM_FLOAT,
                 None,  # type: ignore
                 None,  # type: ignore
                 0,
             ),
             type_,
         )
-    elif type_ == VarType.STR:
+    elif type_ == TYPE_STR:
         return StrNode(Token(TokenType.STR, None, None, ""))  # type: ignore
-    elif type_ == VarType.CHAR:
+    elif type_ == TYPE_CHAR:
         return CharNode(Token(TokenType.CHAR, None, None, ""))  # type: ignore
-    elif type_ == VarType.BOOL:
+    elif type_ == TYPE_BOOL:
         return BoolNode(Token(TokenType.BOOL, None, None, False))  # type: ignore
     else:
         raise Exception("Invalid type")

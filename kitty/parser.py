@@ -23,10 +23,11 @@ from kitty.ast import (
     VarAccessNode,
     VarNode,
     WhileNode,
+    TypeNode,
 )
 from kitty.errors import Error, InvalidSyntaxError
 from kitty.token import Token, TokenType
-from kitty.types import VarType, identifier_to_var_type
+from kitty.types import TYPE_UNTYPED, identifier_to_type
 
 
 class ParseResult:
@@ -259,26 +260,15 @@ class Parser:
         var_id_tok = self.cur_tok
         self.advance(res)
 
-        var_type = VarType.UNTYPED
-        var_type_tok = None
+        type_node = None
 
         if self.cur_tok.type_ == TokenType.COLON:
             self.advance(res)
 
-            if self.cur_tok.type_ == TokenType.IDENTIFIER:
-                var_type_tok = self.cur_tok
-                var_type = identifier_to_var_type(self.cur_tok)
+            type_node = res.register_result(self.parse_type_expr())
 
-                self.advance(res)
-
-            else:
-                return res.register_failure(
-                    InvalidSyntaxError(
-                        self.cur_tok.pos_start,
-                        self.cur_tok.pos_end,
-                        details="Expected identity (type-like)",
-                    )
-                )
+            if res.error or not type_node:
+                return res
 
         var_expr = None
         if self.cur_tok.type_ == TokenType.ASSIGN:
@@ -294,7 +284,7 @@ class Parser:
                 )
             )
 
-        elif var_type == VarType.UNTYPED:
+        elif type_node is None:
             res.register_failure(
                 InvalidSyntaxError(
                     self.cur_tok.pos_start,
@@ -303,9 +293,7 @@ class Parser:
                 )
             )
 
-        # self.symbol_table_stack[-1].set(var_id_tok.ctx, (var_type, var_expr))
-
-        return res.register_success(VarNode(var_id_tok, var_type_tok, var_type, var_expr, True, is_const, pos_start=pos_start))  # type: ignore
+        return res.register_success(VarNode(var_id_tok, type_node, var_expr, True, is_const, pos_start=pos_start))  # type: ignore
 
     def parse_cast_expr(self) -> ParseResult:
         res = ParseResult()
@@ -676,7 +664,7 @@ class Parser:
         if res.error or not expr:
             return res
 
-        return res.register_success(VarNode(var_id_tok, None, VarType.UNTYPED, expr, False, False))  # type: ignore
+        return res.register_success(VarNode(var_id_tok, None, None, expr, False, False))  # type: ignore
 
     def parse_list_expr(self) -> ParseResult:
         logging.debug("Parse list expr")
@@ -1183,10 +1171,12 @@ class Parser:
                     )
                 )
 
-            arg_type_tok = self.cur_tok
-            arg_type = identifier_to_var_type(self.cur_tok)
+            arg_type_node = res.register_result(self.parse_type_expr())
 
-            args.append(VarNode(arg_id, arg_type_tok, arg_type, None, True, False))
+            if res.error or not arg_type_node:
+                return res
+
+            args.append(VarNode(arg_id, arg_type_node, None, True, False))
 
             self.advance(res)
 
@@ -1226,10 +1216,12 @@ class Parser:
                         )
                     )
 
-                arg_type_tok = self.cur_tok
-                arg_type = identifier_to_var_type(self.cur_tok)
+                arg_type_node = res.register_result(self.parse_type_expr())
 
-                args.append(VarNode(arg_id, arg_type_tok, arg_type, None, True, False))
+                if res.error or not arg_type_node:
+                    return res
+
+                args.append(VarNode(arg_id, arg_type_node, None, True, False))
 
                 self.advance(res)
 
@@ -1330,3 +1322,30 @@ class Parser:
                 auto_ret=auto_ret,
             )
         )
+
+    def parse_type_expr(self) -> ParseResult:
+        res = ParseResult()
+
+        if self.cur_tok.type_ != TokenType.IDENTIFIER:
+            return res.register_failure(
+                InvalidSyntaxError(
+                    self.cur_tok.pos_start,
+                    self.cur_tok.pos_end,
+                    details="Expected identifier"
+                )
+            )
+        
+        type_token = self.cur_tok
+        
+        self.advance(res)
+        
+        type_arg_node = None
+        if self.cur_tok.type_ == TokenType.L_SQUARE:
+            self.advance(res)
+            
+            type_arg_node: TypeNode = res.register_result(self.parse_type_expr())
+            
+            if res.error or not type_arg_node:
+                return res
+        
+        type_ = identifier_to_type(type_token, type_arg_node.type_ if type_arg_node else None)

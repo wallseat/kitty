@@ -10,7 +10,7 @@ expr        : cast-expr ((KEYWORD:and|KEYWORD:or) cast-expr)*
             : KEYWORD:break
 
 var-def     : (KEYWORD:const)? KEYWORD:var IDENTIFIER
-              ((COLON IDENTIFIER) (ASSIGN expr)?) | ASSIGN expr
+              ((COLON type-expr) (ASSIGN expr)?) | ASSIGN expr
 
 cast-expr   : comp-expr (IDENTIFIER:as IDENTIFIER)?
 
@@ -62,6 +62,8 @@ while-expr  : KEYWORD:while expr
               S_BLOCK statements E_BLOCK
 
 func-def    : KEYWORD:func IDENTIFIER
-              L_BRC (IDENTIFIER COLON IDENTIFIER (COMMA IDENTIFIER COLON IDENTIFIER)*)? R_BRC R_ARROW IDENTIFIER
+              L_BRC (IDENTIFIER COLON type-expr (COMMA IDENTIFIER COLON type-expr)*)? R_BRC R_ARROW IDENTIFIER
               (R_ARROW expr)
             | (S_BLOCK statements E_BLOCK)
+
+type-expr   : IDENTIFIER (L_SQUARE type-expr R_SQUARE)?

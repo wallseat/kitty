@@ -26,7 +26,7 @@ from kitty.errors import Error, ValidationError
 from kitty.solver import NodeValueConverter, ValueCaster, create_default
 from kitty.symbol_table import FuncSymbol, SymbolTable, VarSymbol
 from kitty.token import TokenType
-from kitty.types import VarType
+from kitty.types import TYPE_BOOL, TYPE_UNTYPED, TYPE_VOID, Type_
 
 
 class ContextBlock:
@@ -73,8 +73,8 @@ class ValidationContext:
     parent_ctx: Optional["ValidationContext"]
 
     can_return: bool
-    return_type: Optional[VarType]
-    expr_type: Optional[VarType]
+    return_type: Optional[Type_]
+    expr_type: Optional[Type_]
 
     can_continue: bool
     can_break: bool
@@ -85,8 +85,8 @@ class ValidationContext:
         can_return: bool = False,
         can_continue: bool = False,
         can_break: bool = False,
-        return_type: Optional[VarType] = None,
-        expr_type: Optional[VarType] = None,
+        return_type: Optional[Type_] = None,
+        expr_type: Optional[Type_] = None,
     ):
         if parent_ctx is not None:
             self.parent_ctx = parent_ctx
@@ -250,9 +250,9 @@ class Validator:
                         details=(
                             "invalid expr type, "
                             "expected type "
-                            f"'{cur_validation_ctx.return_type.value}', "  # type: ignore
+                            f"'{cur_validation_ctx.return_type}', "  # type: ignore
                             "got "
-                            f"'{ctx_block.node.type_.value}'"  # type: ignore
+                            f"'{ctx_block.node.type_}'"  # type: ignore
                         ),
                     )
                 )
@@ -302,7 +302,7 @@ class Validator:
                 )
             )
 
-        if ast.type_ == VarType.VOID:
+        if ast.type_ == TYPE_VOID:
             return res.register_failure(
                 ValidationError(
                     ast.pos_start,
@@ -332,7 +332,7 @@ class Validator:
                     )
                 )
 
-            if ast.type_ == VarType.UNTYPED:
+            if ast.type_ == TYPE_UNTYPED:
                 ast.type_ = ctx_block.node.type_  # type: ignore
 
             elif ast.type_ != ctx_block.node.type_:  # type: ignore
@@ -412,9 +412,9 @@ class Validator:
                     ast.pos_end,
                     details=(
                         "the declared type "
-                        f"'{sym.type_.value}' "
+                        f"'{sym.type_}' "
                         "of the variable does not match the data type "
-                        f"'{ctx_block.node.type_.value}'"  # type: ignore
+                        f"'{ctx_block.node.type_}'"  # type: ignore
                     ),
                 )
             )
@@ -462,9 +462,9 @@ class Validator:
                             details=(
                                 "return type does not match declared type, "
                                 "expected "
-                                f"'{parent_validation_ctx.return_type.value}' "  # type: ignore
+                                f"'{parent_validation_ctx.return_type}' "  # type: ignore
                                 "got "
-                                f"'{ctx_block.node.type_.value}'"  # type: ignore
+                                f"'{ctx_block.node.type_}'"  # type: ignore
                             ),
                         )
                     )
@@ -473,7 +473,7 @@ class Validator:
                 ast.type_ = ctx_block.node.type_  # type: ignore
 
             else:
-                if parent_validation_ctx.return_type != VarType.VOID:
+                if parent_validation_ctx.return_type != TYPE_VOID:
                     return res.register_failure(
                         ValidationError(
                             ast.pos_start,
@@ -481,9 +481,9 @@ class Validator:
                             details=(
                                 "return type does not match declared type, "
                                 "expected "
-                                f"'{parent_validation_ctx.return_type.value}' "  # type: ignore
+                                f"'{parent_validation_ctx.return_type}' "  # type: ignore
                                 "got "
-                                f"'{VarType.VOID.value}'"  # type: ignore
+                                f"'{TYPE_VOID}'"  # type: ignore
                             ),
                         )
                     )
@@ -665,7 +665,7 @@ class Validator:
             if err is not None:
                 return res.register_failure(err)
 
-        if parent_validation_ctx.expr_type == VarType.BOOL:
+        if parent_validation_ctx.expr_type == TYPE_BOOL:
             solved_value, err = solved_value.bool_()  # type: ignore
 
             if err is not None:
@@ -740,7 +740,7 @@ class Validator:
         for idx, case in enumerate(ast.cases):
             condition_ctx_block = res.register_result(
                 self.validate_expr(
-                    case[0], ValidationContext(expr_type=VarType.BOOL), parent_sym_table  # type: ignore
+                    case[0], ValidationContext(expr_type=TYPE_BOOL), parent_sym_table  # type: ignore
                 )
             )
 
@@ -839,7 +839,7 @@ class Validator:
         condition_ctx_block = res.register_result(
             self.validate_expr(
                 ast.condition,
-                ValidationContext(parent_validation_ctx, expr_type=VarType.BOOL),
+                ValidationContext(parent_validation_ctx, expr_type=TYPE_BOOL),
                 parent_sym_table,
             )
         )

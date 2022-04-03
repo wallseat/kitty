@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Tuple, Union
 
 from kitty.ast import BaseNode, FuncNode, VarNode
-from kitty.types import VarType
+from kitty.types import Type_
 
 
 class BaseSymbol:
@@ -10,10 +10,10 @@ class BaseSymbol:
 
 
 class VarSymbol(BaseSymbol):
-    type_: VarType
+    type_: Type_
     ref_node: VarNode
 
-    def __init__(self, name: str, type_: VarType, ref_node: VarNode):
+    def __init__(self, name: str, type_: Type_, ref_node: VarNode):
         self.name = name
         self.type_ = type_
         self.ref_node = ref_node
@@ -21,14 +21,14 @@ class VarSymbol(BaseSymbol):
 
 class FuncSymbol(BaseSymbol):
     args: List[VarNode]
-    ret_type: VarType
+    ret_type: Type_
     ref_node: FuncNode
 
     def __init__(
         self,
         name: str,
         args: List[VarNode],
-        ret_type: VarType,
+        ret_type: Type_,
         ref_node: FuncNode,
     ):
         self.name = name

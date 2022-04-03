@@ -2,7 +2,15 @@ from typing import List, Optional, Tuple, Union
 
 from kitty.position import Position
 from kitty.token import Token, TokenType
-from kitty.types import VarType
+from kitty.types import (
+    Type_,
+    TYPE_BOOL,
+    TYPE_CHAR,
+    TYPE_INT,
+    TYPE_FLOAT,
+    TYPE_STR,
+    TYPE_UNTYPED
+)
 
 
 class BaseNode:
@@ -42,7 +50,7 @@ class StatementsNode(BaseNode):
 
 
 class ExprNode(BaseNode):
-    type_: VarType
+    type_: Optional[Type_]
 
 
 class CastNode(ExprNode):
@@ -52,7 +60,7 @@ class CastNode(ExprNode):
     def __init__(
         self,
         cast_type_tok: Token,
-        cast_type: VarType,
+        cast_type: Type_,
         cast_node: ExprNode,
     ):
         self.cast_type_tok = cast_type_tok
@@ -78,6 +86,39 @@ class CastNode(ExprNode):
         )
 
 
+class TypeNode(ExprNode):
+    type_tok: Token
+    param_type_node: Optional["TypeNode"]
+
+    def __init__(
+        self, type_: Type_, type_tok: Token, pos_end: Position, param_type_node: Optional["TypeNode"] = None
+    ):
+        self.type_ = type_
+        self.type_tok = type_tok
+        self.param_type_node = param_type_node
+        
+        super(TypeNode, self).__init__(type_tok.pos_start, pos_end)
+    
+    def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
+        return (
+            (indent * ind_c)
+            + 'TypeNode: [\n'
+            + (indent * ind_c)
+            + f'{indent}type_token: {self.type_tok}'
+            + (indent * ind_c)
+            + f'{indent}type: {self.type_}'
+            + (
+                + ',\n'
+                (indent * ind_c)
+                + f'{indent}param_type: {self.param_type_node}\n'
+                if self.param_type_node
+                else "\b"
+            )
+            + (indent * ind_c)
+            + ']'
+        )
+
+
 class ValueNode(ExprNode):
     token: Token
 
@@ -92,13 +133,13 @@ class ValueNode(ExprNode):
 class NumericNode(ValueNode):
     token: Token
 
-    def __init__(self, token: Token, type_: Optional[VarType] = None):
+    def __init__(self, token: Token, type_: Optional[Type_] = None):
         self.type_ = (
             type_
             if type_ is not None
-            else VarType.INT
+            else TYPE_INT
             if token.type_ == TokenType.NUM_INT
-            else VarType.FLOAT
+            else TYPE_FLOAT
         )
         super(NumericNode, self).__init__(token)
 
@@ -108,7 +149,7 @@ class NumericNode(ValueNode):
 
 class CharNode(ValueNode):
     token: Token
-    type_ = VarType.CHAR
+    type_ = TYPE_CHAR
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (indent * ind_c) + f"Char[{self.token}]"
@@ -116,7 +157,7 @@ class CharNode(ValueNode):
 
 class StrNode(ValueNode):
     token: Token
-    type_ = VarType.STR
+    type_ = TYPE_STR
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (indent * ind_c) + f"Str[{self.token}]"
@@ -124,7 +165,7 @@ class StrNode(ValueNode):
 
 class BoolNode(ValueNode):
     token: Token
-    type_ = VarType.BOOL
+    type_ = TYPE_BOOL
 
     def pretty_repr(self, ind_c: int = 0, indent: str = "  ") -> str:
         return (indent * ind_c) + f"Bool[{self.token.ctx}]"
@@ -195,7 +236,7 @@ class UnaryOpNode(ExprNode):
 
 class VarNode(ExprNode):
     var_id_tok: Token
-    var_type_tok: Token
+    type_node: TypeNode
 
     value_node: Optional[ExprNode]
     is_const: bool
@@ -205,27 +246,26 @@ class VarNode(ExprNode):
     def __init__(
         self,
         var_id_tok: Token,
-        var_type_tok: Token,
-        var_type: VarType,
+        type_node: Optional[TypeNode],
         value_node: Optional[ExprNode],
         is_definition: bool,
         is_const: bool,
         pos_start: Position = None,
     ):
         self.var_id_tok = var_id_tok
-        self.var_type_tok = var_type_tok
-
+        self.type_node = type_node
         self.value_node = value_node
-        self.type_ = var_type
         self.is_definition = is_definition
         self.is_const = is_const
+        
+        self.type_ = TYPE_UNTYPED
 
         super(VarNode, self).__init__(
             var_id_tok.pos_start if pos_start is None else pos_start,
             value_node.pos_end
             if value_node
-            else var_type_tok.pos_end
-            if var_type_tok
+            else type_node.pos_end
+            if type_node
             else var_id_tok.pos_end,
         )
 
@@ -236,7 +276,13 @@ class VarNode(ExprNode):
             + (indent * ind_c)
             + f"{indent}id: {self.var_id_tok},\n"
             + (indent * ind_c)
-            + f"{indent}type: {self.type_},\n"
+            + (
+                f"{indent}type_node: [\n"
+                + f"{self.var_type_node.pretty_repr(ind_c + 2, indent)}\n"
+                + f"{indent}],\n"
+                if self.type_node and not self.type_
+                else f"type: {self.type_},\n"
+            )
             + (
                 (indent * ind_c)
                 + f"{indent}value: [\n"
@@ -353,7 +399,7 @@ class CommentNode(BaseNode):
 class FuncNode(BaseNode):
     func_id_token: Token
     args: List[VarNode]
-    ret_type: VarType
+    ret_type: Type_
     body: BaseNode
     auto_ret: bool
 
@@ -361,7 +407,7 @@ class FuncNode(BaseNode):
         self,
         func_id_token: Token,
         args: List[VarNode],
-        ret_type: VarType,
+        ret_type: Type_,
         body: BaseNode,
         auto_ret: bool = False,
     ):
